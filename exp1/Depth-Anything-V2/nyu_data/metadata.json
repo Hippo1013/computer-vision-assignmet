@@ -1,0 +1,87 @@
+{
+  "dataset": "NYU Depth V2",
+  "source_url": "https://horatio.cs.nyu.edu/mit/silberman/nyu_depth_v2/nyu_depth_v2_labeled.mat",
+  "source_bytes": 2972037809,
+  "source_etag": "\"b125b2b1-5aa5b95787a80\"",
+  "homepage": "https://cs.nyu.edu/~fergus/datasets/nyu_depth_v2.html",
+  "description": "Eight teaching examples, not an official benchmark split.",
+  "pixel_convention": "0-based; subtract 1 from original MATLAB principal point.",
+  "depth": "Original rawDepths in meters, aligned to RGB, values unchanged.",
+  "mask": "finite depth in (0.1,10) and numpy ROI[45:471,41:601]. All valid pixels are used for per-image affine inverse-depth alignment and aligned-error evaluation.",
+  "files": {
+    "reference/nyu_0001.npz": "910eeec6747b8e6d2fee69869d2989cc0224422eba370d062281a46520fcb312",
+    "reference/nyu_0101.npz": "4c66b7bf721c072c25c9968bda9bdde97b6f140f66bcb0baa7902dd1f2784c47",
+    "reference/nyu_0201.npz": "beccd35a7bce2480b228ca14c6ea1ee3412a451f172fc062dfa57396203d8959",
+    "reference/nyu_0401.npz": "cae970683cb7a01d8c59c6de82d9a91c2a4bd1fe3b1a153868464469bbf228f3",
+    "reference/nyu_0601.npz": "4ee1fbae2b5023467fbcc8c5b96ba7b50d5f423ef4f9f2767ead2667aa8c66e5",
+    "reference/nyu_0801.npz": "94d03dabf2a30b8199833275110929d53b5ae858c219f233192c45e2f5ff27f3",
+    "reference/nyu_1001.npz": "14e77742c5063724c1f175eeb52c4613efd8db0d8f5309378235257815e20877",
+    "reference/nyu_1201.npz": "e8dcc0cc706983697f34537672c3e1c12d7fce711f6d900477c2539d89521e80",
+    "rgb/nyu_0001.png": "4da0609afc5c4d4902bf624823f0c6ae738d1de470a0d0ff0df0c04d3c6997be",
+    "rgb/nyu_0101.png": "eac22050dbae3e0ad143a2af1f6b8e219bb729200cb58f9f7c7901c40383621d",
+    "rgb/nyu_0201.png": "2a4830ccb87a0abdf02aaaddff5d2884c1d3364b5233790d98b7b04044365f0f",
+    "rgb/nyu_0401.png": "cf6861ceef58215e3cf4efbe16c781958d13d29705b35e93b91f3e49979c8992",
+    "rgb/nyu_0601.png": "c64339bf0ba5720eb2879ac223fa9c7d38209fc732dc73f3a88513d282772eea",
+    "rgb/nyu_0801.png": "417d6f7c4049b903ebdd9b938273b30916b5f227c4950d8f2c1750f8b52aab37",
+    "rgb/nyu_1001.png": "b692539ecaba61f34c34b1650d20557928302a7a9bd62e5ed9ec71ee180ec0af",
+    "rgb/nyu_1201.png": "d1a4ff441c977c37e457c2ddd5b0ab8a713ee5c24b9dd1866100cf5a7bd49619"
+  },
+  "samples": [
+    {
+      "id": "nyu_0001",
+      "matlab_index": 1,
+      "scene": "kitchen_0004",
+      "valid_pixels": 230471,
+      "raw_depth_sha256": "3055233dbd03ae5d9297a295f329fd907af4b7b42cb61d355d20ec3a463d721d"
+    },
+    {
+      "id": "nyu_0101",
+      "matlab_index": 101,
+      "scene": "bookstore_0002",
+      "valid_pixels": 195042,
+      "raw_depth_sha256": "f354ffae717bd3a049a2dc486cc27a164b34e4026059e6a4598da6c121e0e918"
+    },
+    {
+      "id": "nyu_0201",
+      "matlab_index": 201,
+      "scene": "kitchen_0002",
+      "valid_pixels": 185643,
+      "raw_depth_sha256": "f3dc856726e21f20fa8f7fc6275f17c12e08b86b7ca8b2197205adc8a7118948"
+    },
+    {
+      "id": "nyu_0401",
+      "matlab_index": 401,
+      "scene": "home_storage_0001",
+      "valid_pixels": 225314,
+      "raw_depth_sha256": "5769a6458d5fb5908c93f140398a30c0149143228f31b58be875dd0650059436"
+    },
+    {
+      "id": "nyu_0601",
+      "matlab_index": 601,
+      "scene": "living_room_0086",
+      "valid_pixels": 229978,
+      "raw_depth_sha256": "d1e8ef9f9920ce6963e0b322d282c9be823e995c14ebcfc9b500418c028b1c3e"
+    },
+    {
+      "id": "nyu_0801",
+      "matlab_index": 801,
+      "scene": "kitchen_0030",
+      "valid_pixels": 165008,
+      "raw_depth_sha256": "dd77c91f0bb5bdccb8a20083b7891b409b51d3a7a5205ffec1c9643cfa3f9df3"
+    },
+    {
+      "id": "nyu_1001",
+      "matlab_index": 1001,
+      "scene": "bedroom_0058",
+      "valid_pixels": 206243,
+      "raw_depth_sha256": "19e5011452d37db88bb80e292b692cbf0da4aa17e5f1e1bf62f2a38ad35e89b0"
+    },
+    {
+      "id": "nyu_1201",
+      "matlab_index": 1201,
+      "scene": "living_room_0025",
+      "valid_pixels": 212119,
+      "raw_depth_sha256": "ea32301dd08ecaf4128a3e2c14d7189dfa459ed72c5d642d738ee42181cc575f"
+    }
+  ]
+}

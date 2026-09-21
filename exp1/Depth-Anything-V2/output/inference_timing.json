@@ -1,0 +1,16 @@
+{
+  "device": "mps",
+  "encoder": "vits",
+  "input_size": 518,
+  "scope": "infer_image including preprocessing, inference, and conversion to numpy; excluding file I/O",
+  "warmup_runs": 0,
+  "image_count": 1,
+  "total_seconds": 0.3423198329983279,
+  "average_seconds": 0.3423198329983279,
+  "images": [
+    {
+      "filename": "inputs/classroom.png",
+      "seconds": 0.3423198329983279
+    }
+  ]
+}

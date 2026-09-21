@@ -1,0 +1,4 @@
+# macOS metadata and Python bytecode caches
+.DS_Store
+__pycache__/
+*.py[cod]

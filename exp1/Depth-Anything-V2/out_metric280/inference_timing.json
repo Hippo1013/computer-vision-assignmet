@@ -1,0 +1,47 @@
+{
+  "device": "mps",
+  "encoder": "vits",
+  "input_size": 280,
+  "load_from": "metric_depth/checkpoints/depth_anything_v2_metric_hypersim_vits.pth",
+  "max_depth": 20.0,
+  "depth_unit": "meters",
+  "scope": "infer_image including preprocessing, inference, and conversion to numpy; excluding file I/O",
+  "warmup_runs": 0,
+  "image_count": 8,
+  "total_seconds": 0.563026582938619,
+  "average_seconds": 0.07037832286732737,
+  "images": [
+    {
+      "filename": "nyu_data/rgb/nyu_0101.png",
+      "seconds": 0.33585670799948275
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0401.png",
+      "seconds": 0.05231516697676852
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0601.png",
+      "seconds": 0.039778332982677966
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0201.png",
+      "seconds": 0.030256791971623898
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0001.png",
+      "seconds": 0.030345915991347283
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0801.png",
+      "seconds": 0.02520895900670439
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_1001.png",
+      "seconds": 0.023563583032228053
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_1201.png",
+      "seconds": 0.025701124977786094
+    }
+  ]
+}

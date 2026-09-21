@@ -1,0 +1,3 @@
+﻿input_size,image_count,averaging_method,aligned_abs_rel_mean,depth_rmse_m_mean,xyz_rmse_m_mean
+280,8,equal_weight_per_image,0.08036386720167435,0.40197440548928887,0.42997251178327234
+518,8,equal_weight_per_image,0.07550538093880728,0.3737933327913796,0.39857301925885563

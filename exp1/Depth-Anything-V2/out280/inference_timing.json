@@ -1,0 +1,44 @@
+{
+  "device": "mps",
+  "encoder": "vits",
+  "input_size": 280,
+  "scope": "infer_image including preprocessing, inference, and conversion to numpy; excluding file I/O",
+  "warmup_runs": 0,
+  "image_count": 8,
+  "total_seconds": 0.4264392909244634,
+  "average_seconds": 0.05330491136555793,
+  "images": [
+    {
+      "filename": "nyu_data/rgb/nyu_0101.png",
+      "seconds": 0.2109080419759266
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0401.png",
+      "seconds": 0.04853125003864989
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0601.png",
+      "seconds": 0.0360811660066247
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0201.png",
+      "seconds": 0.03197420900687575
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0001.png",
+      "seconds": 0.02644541597692296
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_0801.png",
+      "seconds": 0.02467287494800985
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_1001.png",
+      "seconds": 0.02510537498164922
+    },
+    {
+      "filename": "nyu_data/rgb/nyu_1201.png",
+      "seconds": 0.022720957989804447
+    }
+  ]
+}
