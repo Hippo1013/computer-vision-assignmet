@@ -1,27 +1,18 @@
-"""用法：python geometry_all_metric.py out_metric280 results_metric_518
+"""用法：python geometry_all_metric.py --input-size 280 518
 
-直接评估米制深度，不拟合尺度、不取倒数、不裁剪预测值。
-使用 nyu_data/reference 中的 valid 掩码，与原 geometry_all.py 相同。
-输入尺寸、图片清单从各目录的 inference_timing.json 读取，避免重复处理派生文件。
-在预测目录导出 *_depth_m.npy、*_pred.ply 和 *_gt.ply。
-逐图指标和逐图等权均值分别写入 evaluation/metric_evaluation_metrics.csv
-和 evaluation/metric_evaluation_means.csv。RMSE 均值是各图 RMSE 的算术平均，
-不是将所有像素合并后计算的 RMSE。相对深度的旧评估使用真值对齐，口径不同。
+直接评估原始米制深度，不对齐、不裁剪。
+读取 outputs/metric/<尺寸>/prediction，写入同级 raw，并自动刷新汇总表。
 """
 
 import argparse
-import csv
-import json
-from pathlib import Path
 
 import cv2
 import numpy as np
 import open3d as o3d
 
 
-ROOT = Path(__file__).resolve().parent
-PROTOCOL = 'raw_metric_no_alignment_no_clipping'
-METRICS = ('abs_rel', 'depth_rmse_m', 'xyz_rmse_m')
+from experiment_paths import REFERENCE, RGB, SIZES, RAW_PROTOCOL, collect_predictions, result_dir
+from summarize_results import save_group, rebuild_summary
 
 
 def evaluate_depth(z, g, K, valid):
@@ -51,13 +42,15 @@ def evaluate_depth(z, g, K, valid):
 
 
 def process_prediction(path, input_size):
-    sid, out = path.stem, path.parent
+    sid = path.stem
+    out = result_dir('metric', input_size, 'raw')
+    out.mkdir(parents=True, exist_ok=True)
     z = np.load(path).astype(float)
-    with np.load(ROOT / 'nyu_data' / 'reference' / f'{sid}.npz') as data:
+    with np.load(REFERENCE / f'{sid}.npz') as data:
         g, K, valid = (data[key] for key in ('depth_m', 'K', 'valid'))
     values, P, G = evaluate_depth(z, g, K, valid)
 
-    rgb_path = ROOT / 'nyu_data' / 'rgb' / f'{sid}.png'
+    rgb_path = RGB / f'{sid}.png'
     bgr = cv2.imread(str(rgb_path))
     if bgr is None or bgr.shape[:2] != z.shape:
         raise ValueError(f'无法读取图片或图片尺寸不匹配：{rgb_path}')
@@ -74,10 +67,10 @@ def process_prediction(path, input_size):
 
     row = {
         'input_size': input_size,
-        'prediction_dir': str(out),
+        'prediction_dir': str(path.parent),
         'image_id': sid,
         'valid_pixels': int(valid.sum()),
-        'depth_processing': PROTOCOL,
+        'depth_processing': RAW_PROTOCOL,
         **values,
     }
     print(
@@ -88,78 +81,18 @@ def process_prediction(path, input_size):
     return row
 
 
-def collect_jobs(folders):
-    jobs = []
-    seen = set()
-    for folder in folders:
-        resolved = folder.resolve()
-        if resolved in seen:
-            continue
-        seen.add(resolved)
-        with (folder / 'inference_timing.json').open(encoding='utf-8') as handle:
-            metadata = json.load(handle)
-        if metadata.get('depth_unit') != 'meters':
-            raise ValueError(f'{folder} 缺少米制深度标记，请使用 Metric 推理输出')
-        size = metadata['input_size']
-        if not isinstance(size, int) or size <= 0:
-            raise ValueError(f'{folder} 的 input_size 无效')
-        ids = [Path(item['filename']).stem for item in metadata['images']]
-        if not ids or len(set(ids)) != len(ids) or metadata['image_count'] != len(ids):
-            raise ValueError(f'{folder} 的图片清单为空、重复或与 image_count 不符')
-        for sid in sorted(ids):
-            path = folder / f'{sid}.npy'
-            for required in (path, ROOT / 'nyu_data' / 'reference' / f'{sid}.npz',
-                             ROOT / 'nyu_data' / 'rgb' / f'{sid}.png'):
-                if not required.is_file():
-                    raise FileNotFoundError(required)
-            jobs.append((path, size))
-    return jobs
-
-
-def summarize(rows):
-    groups = {}
-    for row in rows:
-        groups.setdefault((row['input_size'], row['prediction_dir']), []).append(row)
-    return [
-        {
-            'input_size': size,
-            'prediction_dir': folder,
-            'image_count': len(group),
-            'averaging_method': 'equal_weight_per_image',
-            'depth_processing': PROTOCOL,
-            **{f'{key}_mean': float(np.mean([row[key] for row in group])) for key in METRICS},
-        }
-        for (size, folder), group in sorted(groups.items())
-    ]
-
-
-def write_csv(path, rows):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open('w', newline='', encoding='utf-8-sig') as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('folders', nargs='+', type=Path, help='Metric 推理结果目录')
+    parser.add_argument('--input-size', nargs='+', type=int, choices=SIZES, default=list(SIZES))
     args = parser.parse_args()
     try:
-        jobs = collect_jobs(args.folders)
+        jobs = collect_predictions('metric', args.input_size)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         parser.error(str(exc))
     rows = [process_prediction(path, size) for path, size in jobs]
-    means = summarize(rows)
-    detail_path = ROOT / 'evaluation' / 'metric_evaluation_metrics.csv'
-    mean_path = ROOT / 'evaluation' / 'metric_evaluation_means.csv'
-    write_csv(detail_path, rows)
-    write_csv(mean_path, means)
-    print(f'已处理 {len(rows)} 张预测图，逐图指标：{detail_path}')
-    print(f'逐图等权均值：{mean_path}')
-    for row in means:
-        print(f'[{row["input_size"]}] {row["image_count"]} 张图均值：'
-              + ', '.join(f'{key} = {row[key + "_mean"]:.6f}' for key in METRICS))
+    for size in dict.fromkeys(args.input_size):
+        save_group([row for row in rows if row['input_size'] == size], 'metric', size, 'raw')
+    rebuild_summary()
 
 
 if __name__ == '__main__':

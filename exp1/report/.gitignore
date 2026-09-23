@@ -1,0 +1,3 @@
+# The parent repository ignores PDFs; these two PDFs are intentional template assets.
+!模板预览.pdf
+!reference/original-report.pdf

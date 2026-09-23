@@ -1,26 +1,26 @@
-"""用法：python geometry_all.py out280 results_518
+"""用法：python geometry_all.py --input-size 280 518
 
-逐图对齐、评估并导出点云，三个误差指标汇总到 evaluation/evaluation_metrics.csv。
+读取 outputs/relative/<尺寸>/prediction，写入同级 aligned，并自动刷新汇总表。
 拟合和评估使用同一批有效像素，结果为利用真值对齐后的误差。
 """
 
 import argparse
-import csv
-from pathlib import Path
 
 import cv2
 import numpy as np
 import open3d as o3d
 
 
-ROOT = Path(__file__).resolve().parent
-INPUT_SIZES = {'out280': 280, 'results_518': 518}
+from experiment_paths import REFERENCE, RGB, SIZES, collect_predictions, result_dir
+from summarize_results import save_group, rebuild_summary
 
 
 def process_prediction(path, input_size):
-    sid, out = path.stem, path.parent
+    sid = path.stem
+    out = result_dir('relative', input_size, 'aligned')
+    out.mkdir(parents=True, exist_ok=True)
     q = np.load(path).astype(float)
-    with np.load(ROOT / 'nyu_data' / 'reference' / f'{sid}.npz') as data:
+    with np.load(REFERENCE / f'{sid}.npz') as data:
         g, K, valid = (data[key] for key in ['depth_m', 'K', 'valid'])
     assert q.shape == g.shape and np.isfinite(q).all(), path
 
@@ -44,15 +44,17 @@ def process_prediction(path, input_size):
     xyz2 = np.sum((P[valid] - G[valid]) ** 2, axis=1)
     metrics = {
         'input_size': input_size,
-        'prediction_dir': str(out),
+        'prediction_dir': str(path.parent),
         'image_id': sid,
         'valid_pixels': int(valid.sum()),
+        'alignment_a': float(a),
+        'alignment_b': float(b),
         'aligned_abs_rel': float(np.mean(np.abs(e) / g[valid])),
         'depth_rmse_m': float(np.sqrt(np.mean(e ** 2))),
         'xyz_rmse_m': float(np.sqrt(np.mean(xyz2))),
     }
 
-    rgb_path = ROOT / 'nyu_data' / 'rgb' / f'{sid}.png'
+    rgb_path = RGB / f'{sid}.png'
     bgr = cv2.imread(str(rgb_path))
     if bgr is None:
         raise FileNotFoundError(f'无法读取图片：{rgb_path}')
@@ -77,30 +79,18 @@ def process_prediction(path, input_size):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('folders', nargs='+', type=Path, help='out280 和 results_518 的路径')
+    parser.add_argument('--input-size', nargs='+', type=int, choices=SIZES, default=list(SIZES))
     args = parser.parse_args()
 
-    jobs = []
-    for folder in dict.fromkeys(args.folders):
-        if not folder.is_dir() or folder.name not in INPUT_SIZES:
-            parser.error(f'请提供存在的 out280 或 results_518 目录：{folder}')
-        # 跳过本脚本生成的深度图，保证再次运行时不会重复处理。
-        predictions = sorted(
-            path for path in folder.glob('*.npy')
-            if not path.stem.endswith('_depth_m')
-        )
-        if not predictions:
-            parser.error(f'{folder} 中没有预测 .npy 文件')
-        jobs.extend((path, INPUT_SIZES[folder.name]) for path in predictions)
+    try:
+        jobs = collect_predictions('relative', args.input_size)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        parser.error(str(exc))
 
     rows = [process_prediction(path, size) for path, size in jobs]
-    csv_path = ROOT / 'evaluation' / 'evaluation_metrics.csv'
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    with csv_path.open('w', newline='', encoding='utf-8-sig') as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
-        writer.writeheader()
-        writer.writerows(rows)
-    print(f'已处理 {len(rows)} 张预测图，评估表格：{csv_path}')
+    for size in dict.fromkeys(args.input_size):
+        save_group([row for row in rows if row['input_size'] == size], 'relative', size, 'aligned')
+    rebuild_summary()
 
 
 if __name__ == '__main__':

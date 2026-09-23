@@ -7,8 +7,14 @@ import numpy as np
 import os
 import time
 import torch
+import sys
+from pathlib import Path
 
 from depth_anything_v2.dpt import DepthAnythingV2
+
+# 保持 metric_depth 的模型包优先，只追加仓库路径以导入共享路径配置。
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from experiment_paths import RGB, configure_inference_paths, relative_path, resolve_path
 
 
 def synchronize_device(device):
@@ -21,12 +27,12 @@ def synchronize_device(device):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Depth Anything V2 Metric Depth Estimation')
     
-    parser.add_argument('--img-path', type=str)
+    parser.add_argument('--img-path', type=str, default=str(RGB))
     parser.add_argument('--input-size', type=int, default=518)
-    parser.add_argument('--outdir', type=str, default='./vis_depth')
+    parser.add_argument('--outdir', type=str, default=None, help='默认 outputs/metric/<尺寸>/prediction')
     
-    parser.add_argument('--encoder', type=str, default='vitl', choices=['vits', 'vitb', 'vitl', 'vitg'])
-    parser.add_argument('--load-from', type=str, default='checkpoints/depth_anything_v2_metric_hypersim_vitl.pth')
+    parser.add_argument('--encoder', type=str, default='vits', choices=['vits', 'vitb', 'vitl', 'vitg'])
+    parser.add_argument('--load-from', type=str, default=None, help='默认使用对应 encoder 的 Hypersim 权重')
     parser.add_argument('--max-depth', type=float, default=20)
     
     parser.add_argument('--save-numpy', dest='save_numpy', action='store_true', help='also save raw depth as *_raw_depth_meter.npy; <image_stem>.npy is always saved in meters')
@@ -34,6 +40,10 @@ if __name__ == '__main__':
     parser.add_argument('--grayscale', dest='grayscale', action='store_true', help='do not apply colorful palette')
     
     args = parser.parse_args()
+    try:
+        configure_inference_paths(args, 'metric')
+    except ValueError as exc:
+        parser.error(str(exc))
     
     DEVICE = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
     
@@ -51,7 +61,7 @@ if __name__ == '__main__':
     if os.path.isfile(args.img_path):
         if args.img_path.endswith('txt'):
             with open(args.img_path, 'r') as f:
-                filenames = f.read().splitlines()
+                filenames = [str(resolve_path(line.strip())) for line in f if line.strip()]
         else:
             filenames = [args.img_path]
     else:
@@ -73,7 +83,7 @@ if __name__ == '__main__':
         depth = depth_anything.infer_image(raw_image, args.input_size)
         synchronize_device(DEVICE)
         elapsed_seconds = time.perf_counter() - start_time
-        inference_timings.append({'filename': filename, 'seconds': elapsed_seconds})
+        inference_timings.append({'filename': relative_path(filename), 'seconds': elapsed_seconds})
         print(f'Inference time: {elapsed_seconds:.4f} s')
 
         # Save metric depth in meters before normalization for visualization.
@@ -105,10 +115,11 @@ if __name__ == '__main__':
     timing_path = os.path.join(args.outdir, 'inference_timing.json')
     with open(timing_path, 'w', encoding='utf-8') as f:
         json.dump({
+            'model': 'metric',
             'device': DEVICE,
             'encoder': args.encoder,
             'input_size': args.input_size,
-            'load_from': args.load_from,
+            'load_from': relative_path(args.load_from),
             'max_depth': args.max_depth,
             'depth_unit': 'meters',
             'scope': 'infer_image including preprocessing, inference, and conversion to numpy; excluding file I/O',

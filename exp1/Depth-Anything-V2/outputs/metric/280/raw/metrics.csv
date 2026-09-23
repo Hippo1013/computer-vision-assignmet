@@ -1,0 +1,9 @@
+﻿model,input_size,protocol,image_id,valid_pixels,depth_processing,prediction_dir,output_dir,alignment_a,alignment_b,abs_rel,depth_rmse_m,xyz_rmse_m
+metric,280,raw,nyu_0001,230471,raw_metric_no_alignment_no_clipping,outputs/metric/280/prediction,outputs/metric/280/raw,,,0.6431360851146698,1.9189271100393372,2.049655613151771
+metric,280,raw,nyu_0101,195042,raw_metric_no_alignment_no_clipping,outputs/metric/280/prediction,outputs/metric/280/raw,,,0.680255065372871,1.335472816870958,1.4325186049348448
+metric,280,raw,nyu_0201,185643,raw_metric_no_alignment_no_clipping,outputs/metric/280/prediction,outputs/metric/280/raw,,,0.6705675650477823,1.7335620005357641,1.8834165701293046
+metric,280,raw,nyu_0401,225314,raw_metric_no_alignment_no_clipping,outputs/metric/280/prediction,outputs/metric/280/raw,,,0.6582580478185778,1.860130745530187,1.98411484813297
+metric,280,raw,nyu_0601,229978,raw_metric_no_alignment_no_clipping,outputs/metric/280/prediction,outputs/metric/280/raw,,,0.3846250082484139,1.3405725247172058,1.438269146119662
+metric,280,raw,nyu_0801,165008,raw_metric_no_alignment_no_clipping,outputs/metric/280/prediction,outputs/metric/280/raw,,,0.6585424837034628,1.9886012729706342,2.1947081905513874
+metric,280,raw,nyu_1001,206243,raw_metric_no_alignment_no_clipping,outputs/metric/280/prediction,outputs/metric/280/raw,,,0.6826638054904108,1.7915336625923726,1.9197902236359898
+metric,280,raw,nyu_1201,212119,raw_metric_no_alignment_no_clipping,outputs/metric/280/prediction,outputs/metric/280/raw,,,0.3738304084277456,0.9244918405204193,0.9991179216758421

@@ -1,0 +1,114 @@
+% 青蓝实验报告：从 2026-09-18 单目深度实验报告提炼的 XeLaTeX 样式。
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{qinglan-report}[2026/09/18 v1.0 Blue and teal Chinese report]
+\RequirePackage{iftex}
+\RequireXeTeX
+\RequirePackage[a4paper,left=40bp,right=40bp,top=48bp,bottom=53bp]{geometry}
+\RequirePackage{fontspec}
+\RequirePackage[table]{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{tabularx}
+\RequirePackage{booktabs}
+\RequirePackage{amsmath}
+\RequirePackage{lmodern}
+\RequirePackage{caption}
+\RequirePackage{eso-pic}
+\RequirePackage{lastpage}
+\RequirePackage{needspace}
+\RequirePackage{hyperref}
+
+% 字体不随模板分发；macOS 用宋体，其他平台自动回退至 TeX Live 的 Fandol。
+\setmainfont{texgyretermes-regular.otf}[BoldFont=texgyretermes-bold.otf,
+  ItalicFont=texgyretermes-italic.otf,BoldItalicFont=texgyretermes-bolditalic.otf]
+\setsansfont{texgyreheros-regular.otf}[BoldFont=texgyreheros-bold.otf]
+\setmonofont{lmmono10-regular.otf}[Scale=MatchLowercase]
+\IfFontExistsTF{Songti SC}{%
+  \setCJKmainfont{Songti SC}[BoldFont={Songti SC Bold}]%
+}{%
+  \setCJKmainfont{FandolSong-Regular.otf}[BoldFont={FandolSong-Bold.otf}]%
+}
+\definecolor{ReportNavy}{HTML}{203C5D}
+\definecolor{ReportTeal}{HTML}{087E88}
+\definecolor{ReportInk}{HTML}{202B35}
+\definecolor{ReportGray}{HTML}{526171}
+\definecolor{ReportLine}{HTML}{DCE4EB}
+\definecolor{ReportStripe}{HTML}{F1F5F8}
+\definecolor{ReportSummary}{HTML}{E5EEF3}
+
+\makeatletter
+\renewcommand\normalsize{\@setfontsize\normalsize{10.4bp}{15.3bp}%
+  \abovedisplayskip=7bp \belowdisplayskip=7bp
+  \abovedisplayshortskip=4bp \belowdisplayshortskip=4bp}
+\makeatother
+\AtBeginDocument{\normalsize\color{ReportInk}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{7bp}
+\raggedbottom
+\frenchspacing
+\pagestyle{empty}
+\ctexset{section={format={\color{ReportTeal}\bfseries\fontsize{12.6bp}{17bp}\selectfont},
+  beforeskip=9bp,afterskip=5bp,aftername=\hspace{.65em}},
+  subsection={format={\color{ReportNavy}\bfseries\fontsize{10.4bp}{15.3bp}\selectfont},
+  beforeskip=7bp,afterskip=3bp}}
+\DeclareCaptionFont{reportcaption}{\fontsize{8.8bp}{12.1bp}\selectfont\color{ReportGray}}
+\captionsetup{font=reportcaption,labelfont=reportcaption,labelsep=space,
+  justification=raggedright,singlelinecheck=false,hypcap=false,skip=5bp}
+\hypersetup{colorlinks=true,linkcolor=ReportNavy,urlcolor=ReportTeal,
+  citecolor=ReportTeal,bookmarksnumbered=true,pdfborder={0 0 0}}
+\graphicspath{{figures/}}
+
+\newcommand\ReportCourse{课程名称 · 实验编号}
+\newcommand\ReportDate{\today}
+\newcommand\ReportFooter{实验范围与结果解释}
+\NewDocumentCommand\ReportSetup{m m m}{%
+  \renewcommand\ReportCourse{#1}\renewcommand\ReportDate{#2}\renewcommand\ReportFooter{#3}}
+% 页眉、页脚在纸面固定位置，正文仍由 LaTeX 自然换行和分页。
+\AddToShipoutPictureFG{%
+  \setlength\unitlength{1bp}%
+  \AtPageUpperLeft{%
+    \put(0,-8){\color{ReportNavy}\rule{\paperwidth}{8bp}}%
+    \put(40,-29){\makebox(0,0)[l]{\color{ReportGray}\fontsize{8.4bp}{11bp}\selectfont\ReportCourse}}%
+    \put(0,-29){\makebox(0,0)[l]{\makebox[\dimexpr\paperwidth-40bp\relax][r]{%
+      \color{ReportGray}\fontsize{8.4bp}{11bp}\selectfont\ReportDate}}}%
+  }%
+  \AtPageLowerLeft{%
+    \put(40,37){\color{ReportLine}\rule{\dimexpr\paperwidth-80bp\relax}{.5bp}}%
+    \put(40,24){\makebox(0,0)[l]{\color{ReportGray}\fontsize{8bp}{10bp}\selectfont\ReportFooter}}%
+    \put(0,24){\makebox(0,0)[l]{\makebox[\dimexpr\paperwidth-40bp\relax][r]{%
+      \color{ReportGray}\fontsize{8bp}{10bp}\selectfont\thepage\ /\ \pageref*{LastPage}}}}%
+  }%
+}
+
+\newcounter{ReportSpread}
+\NewDocumentCommand\ReportPage{m}{%
+  \ifnum\value{ReportSpread}>0\clearpage\fi
+  \stepcounter{ReportSpread}%
+  \pdfbookmark[0]{#1}{report-page-\arabic{ReportSpread}}%
+  {\color{ReportNavy}\bfseries\fontsize{21bp}{27bp}\selectfont #1\par}%
+  \vspace{3bp}}
+\NewDocumentCommand\ReportNote{+m}{%
+  {\fontsize{8.8bp}{12.1bp}\selectfont\color{ReportGray}#1\par}}
+\NewDocumentCommand\ReportFigure{O{220bp} m m}{%
+  \par\addvspace{3bp}\noindent
+  \begin{minipage}{\linewidth}
+    \centering\includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+    \captionof{figure}{#3}%
+  \end{minipage}\par\addvspace{5bp}}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\NewDocumentCommand\ReportHead{m}{\textcolor{white}{#1}}
+\def\ReportPendingTableCaption{}
+\NewDocumentEnvironment{ReportTable}{m +b}{%
+  \par\noindent\begin{minipage}{\linewidth}\begingroup
+  \ifx\ReportPendingTableCaption\empty\else
+    \captionof{table}{\ReportPendingTableCaption}\par\vspace{2bp}%
+  \fi
+  \fontsize{9.1bp}{12.5bp}\selectfont
+  \setlength\tabcolsep{5bp}\renewcommand\arraystretch{1.24}%
+  \rowcolors{2}{white}{ReportStripe}%
+  \noindent\begin{tabularx}{\linewidth}{#1}#2\end{tabularx}%
+  \par\endgroup\end{minipage}\par\addvspace{5bp}%
+  \gdef\ReportPendingTableCaption{}%
+}{}
+\NewDocumentCommand\ReportTableCaption{m}{%
+  \gdef\ReportPendingTableCaption{#1}}

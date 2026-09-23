@@ -1,0 +1,22 @@
+% !TeX program = xelatex
+\documentclass[UTF8,fontset=none,a4paper]{ctexart}
+\usepackage{qinglan-report}
+% 使用模板规定的 15.3 bp 正文行距，避免 ctex 默认行距系数再次放大。
+\linespread{1}
+\ctexset{subsection={beforeskip=12bp,afterskip=5bp},
+  subsubsection={format={\color{ReportTeal}\bfseries\fontsize{10.4bp}{15.3bp}\selectfont},
+    beforeskip=8bp,afterskip=4bp,aftername=\hspace{.65em}}}
+\ReportSetup{机器视觉 · 单目深度与点云重建}{2026-09-23}{实验1 · 单目深度与点云重建}
+\hypersetup{pdftitle={机器视觉-实验报告：实验1-单目深度与点云重建},pdfauthor={曹航硕、吴翱臣}}
+
+\begin{document}
+\ReportPage{机器视觉-实验报告}
+{\color{ReportTeal}\bfseries\fontsize{14bp}{19bp}\selectfont 实验1-单目深度与点云重建\par}
+{\color{ReportInk}曹航硕（3240101938）、吴翱臣（3240106219）\par}
+
+\input{experiment-settings.tex}
+
+\input{results-relative.tex}
+\input{results-metric.tex}
+\input{conclusion.tex}
+\end{document}

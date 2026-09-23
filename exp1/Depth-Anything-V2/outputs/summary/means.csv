@@ -1,0 +1,7 @@
+﻿model,input_size,protocol,image_count,averaging_method,depth_processing,abs_rel_mean,depth_rmse_m_mean,xyz_rmse_m_mean
+relative,280,aligned,8,equal_weight_per_image,inverse_depth_affine_gt_aligned_clipped_0.1_10m,0.08036386720167435,0.40197440548928887,0.42997251178327234
+relative,518,aligned,8,equal_weight_per_image,inverse_depth_affine_gt_aligned_clipped_0.1_10m,0.07550538093880728,0.3737933327913796,0.39857301925885563
+metric,280,raw,8,equal_weight_per_image,raw_metric_no_alignment_no_clipping,0.5939848086529917,1.6116614967221097,1.7376988897914716
+metric,518,raw,8,equal_weight_per_image,raw_metric_no_alignment_no_clipping,0.2221893368370223,0.7055388720761386,0.7533600071444638
+metric,280,aligned,8,equal_weight_per_image,inverse_depth_affine_gt_aligned_clipped_0.1_10m,0.11895772140624579,0.622562604333214,0.669365070656083
+metric,518,aligned,8,equal_weight_per_image,inverse_depth_affine_gt_aligned_clipped_0.1_10m,0.10024981182215027,0.4791732580268458,0.5155985526350665

@@ -1,0 +1,11 @@
+\ReportTableCaption{两种模型的深度与点云误差（8 张图等权均值；粗体为同尺寸下两种模型对齐后的最优值）}
+\begin{ReportTable}{p{176bp}ccCCC}
+\rowcolor{ReportNavy}
+\ReportHead{模型} & \ReportHead{尺寸} & \ReportHead{处理} & \ReportHead{AbsRel} & \ReportHead{\shortstack{深度 RMSE\\/ m}} & \ReportHead{\shortstack{XYZ RMSE\\/ m}} \\
+Depth Anything V2 & 518 & 对齐后 & \textbf{0.0755} & \textbf{0.3738} & \textbf{0.3986} \\
+Depth Anything V2 (Metric Depth) & 518 & 对齐后 & 0.1002 & 0.4792 & 0.5156 \\
+Depth Anything V2 (Metric Depth) & 518 & 原始米制 & 0.2222 & 0.7055 & 0.7534 \\
+Depth Anything V2 & 280 & 对齐后 & \textbf{0.0804} & \textbf{0.4020} & \textbf{0.4300} \\
+Depth Anything V2 (Metric Depth) & 280 & 对齐后 & 0.1190 & 0.6226 & 0.6694 \\
+Depth Anything V2 (Metric Depth) & 280 & 原始米制 & 0.5940 & 1.6117 & 1.7377 \\
+\end{ReportTable}
