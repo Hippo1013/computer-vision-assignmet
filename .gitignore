@@ -2,3 +2,11 @@
 .DS_Store
 __pycache__/
 *.py[cod]
+
+# Pretrained model weights are downloaded separately.
+/exp1/Depth-Anything-V2/checkpoints/
+/exp1/Depth-Anything-V2/metric_depth/checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
