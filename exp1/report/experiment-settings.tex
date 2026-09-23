@@ -1,0 +1,39 @@
+\section{实验设置}
+
+\subsection{数据与运行条件}
+
+采用课程提供的 NYU Depth V2 教学数据，共 8 张 $640\times480$ 的室内 RGB 图像，编号为 0001、0101、0201、0401、0601、0801、1001 和 1201。参考值为与 RGB 对齐的 Kinect 原始实测深度，不使用填补后的深度。有效域沿用数据包掩膜：在行区间 $[45,471)$、列区间 $[41,601)$ 内，选取有限且满足 $0.1<g<10$ m 的像素，其中 $g$ 为真实深度。
+
+实验在 Apple M5、24 GB 统一内存的 macOS 设备上运行，采用 PyTorch MPS 后端。软件环境为 Python 3.12、PyTorch 2.7.1、NumPy 1.26.4、OpenCV 4.10.0 和 Open3D 0.19.0。推理使用评估模式、float32 精度和单张输入，不进行训练或微调。
+
+\subsection{模型配置与对比方案}
+
+两种模型均采用 Small（ViT-S/14）规格，代码以官方仓库提交 \texttt{a561b849} 为基础。Depth Anything V2 使用官方相对深度权重；Depth Anything V2 (Metric Depth) 使用 Hypersim 室内权重，最大预测深度设为 20 m。分别设置输入尺寸为 280 和 518，保持宽高比缩放并将尺寸调整为 14 的倍数，实际网络输入宽高为 $378\times280$ 和 $686\times518$；输出均恢复为 $640\times480$。
+
+\begingroup
+\setlength{\fboxsep}{8bp}
+\noindent\colorbox{ReportTeal!7}{%
+\begin{minipage}{\dimexpr\linewidth-2\fboxsep\relax}
+\color{ReportNavy}
+\textbf{公平比较的设计：}Depth Anything V2 的预测已利用真值校正尺度与偏移，不能直接与未校正的 Depth Anything V2 (Metric Depth) 比较误差。我们\textbf{先将后者的米制深度取倒数，再按相同规则对齐、裁剪}，比较两种模型的几何质量；同时保留其原始米制输出，评价绝对距离精度。因此，每种输入尺寸设置以下三组评估。
+\end{minipage}}\par
+\endgroup
+
+六组评估均使用相同图像、真值有效域和相机内参。
+
+\ReportTableCaption{评估分组与深度处理方式}
+\begin{ReportTable}{@{}p{186bp}L@{}}
+\rowcolor{ReportNavy}
+\ReportHead{评估组} & \ReportHead{处理方式} \\
+Depth Anything V2 & 对齐后：直接以模型输出的相对逆深度为 $q$，拟合尺度与偏移后恢复深度 \\
+Depth Anything V2 (Metric Depth) & 对齐后：将米制预测 $d$ 转为 $q=1/d$，再按相同规则对齐与裁剪 \\
+Depth Anything V2 (Metric Depth) & 原始米制：直接评估米制预测，不拟合尺度、不裁剪预测值 \\
+\end{ReportTable}
+
+两组对齐评估均在每张图的全部有效像素上，分别用最小二乘拟合一组 $a,b$，使 $aq+b$ 接近 $1/g$，再计算 $z=1/(aq+b)$。非正的对齐逆深度按 10 m 处理，最终深度裁剪至 $[0.1,10]$ m。拟合与评估使用同一有效域，因此对齐后的误差不代表独立测距精度。
+
+\subsection{点云、指标与计时约定}
+
+使用数据包内参将预测深度与参考深度反投影到同一相机坐标系，在相同有效像素位置比较三维对应点，不额外进行点云配准。分别计算 AbsRel、深度 RMSE 和 XYZ RMSE；AbsRel 无量纲，后两项单位为米。先逐图计算指标，再对 8 张图等权求算术平均，不将所有像素合并后计算总体 RMSE。
+
+计时包含图像预处理、模型预测和输出恢复到原图尺寸的过程，不包含模型加载、文件读写、点云生成和评估。每张图记录一次推理耗时，再计算 8 张图的平均值。

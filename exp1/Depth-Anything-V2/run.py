@@ -9,6 +9,7 @@ import time
 import torch
 
 from depth_anything_v2.dpt import DepthAnythingV2
+from experiment_paths import RGB, checkpoint, configure_inference_paths, relative_path, resolve_path
 
 
 def synchronize_device(device):
@@ -21,16 +22,20 @@ def synchronize_device(device):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Depth Anything V2')
     
-    parser.add_argument('--img-path', type=str)
+    parser.add_argument('--img-path', type=str, default=str(RGB))
     parser.add_argument('--input-size', type=int, default=518)
-    parser.add_argument('--outdir', type=str, default='./vis_depth')
+    parser.add_argument('--outdir', type=str, default=None, help='默认 outputs/relative/<尺寸>/prediction')
     
-    parser.add_argument('--encoder', type=str, default='vitl', choices=['vits', 'vitb', 'vitl', 'vitg'])
+    parser.add_argument('--encoder', type=str, default='vits', choices=['vits', 'vitb', 'vitl', 'vitg'])
     
     parser.add_argument('--pred-only', dest='pred_only', action='store_true', help='only display the prediction')
     parser.add_argument('--grayscale', dest='grayscale', action='store_true', help='do not apply colorful palette')
     
     args = parser.parse_args()
+    try:
+        configure_inference_paths(args, 'relative')
+    except ValueError as exc:
+        parser.error(str(exc))
     
     DEVICE = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
     
@@ -42,13 +47,13 @@ if __name__ == '__main__':
     }
     
     depth_anything = DepthAnythingV2(**model_configs[args.encoder])
-    depth_anything.load_state_dict(torch.load(f'checkpoints/depth_anything_v2_{args.encoder}.pth', map_location='cpu'))
+    depth_anything.load_state_dict(torch.load(checkpoint('relative', args.encoder), map_location='cpu'))
     depth_anything = depth_anything.to(DEVICE).eval()
     
     if os.path.isfile(args.img_path):
         if args.img_path.endswith('txt'):
             with open(args.img_path, 'r') as f:
-                filenames = f.read().splitlines()
+                filenames = [str(resolve_path(line.strip())) for line in f if line.strip()]
         else:
             filenames = [args.img_path]
     else:
@@ -70,7 +75,7 @@ if __name__ == '__main__':
         depth = depth_anything.infer_image(raw_image, args.input_size)
         synchronize_device(DEVICE)
         elapsed_seconds = time.perf_counter() - start_time
-        inference_timings.append({'filename': filename, 'seconds': elapsed_seconds})
+        inference_timings.append({'filename': relative_path(filename), 'seconds': elapsed_seconds})
         print(f'Inference time: {elapsed_seconds:.4f} s')
 
         np.save(os.path.join(args.outdir, os.path.splitext(os.path.basename(filename))[0] + '.npy'), depth)
@@ -96,6 +101,8 @@ if __name__ == '__main__':
     timing_path = os.path.join(args.outdir, 'inference_timing.json')
     with open(timing_path, 'w', encoding='utf-8') as f:
         json.dump({
+            'model': 'relative',
+            'depth_unit': 'relative_inverse_depth',
             'device': DEVICE,
             'encoder': args.encoder,
             'input_size': args.input_size,

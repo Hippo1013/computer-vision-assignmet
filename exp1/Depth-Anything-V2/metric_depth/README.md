@@ -1,5 +1,7 @@
 # Depth Anything V2 for Metric Depth Estimation
 
+> 本地课程实验见 [实验指令汇总](../../实验指令汇总.md)。推理脚本默认使用 Hypersim Small 和 NYU 数据；命令行文件路径以仓库根目录为基准。
+
 ![teaser](./assets/compare_zoedepth.png)
 
 We here provide a simple codebase to fine-tune our Depth Anything V2 pre-trained encoder for metric depth estimation. Built on our powerful encoder, we use a simple DPT head to regress the depth. We fine-tune our pre-trained encoder on synthetic Hypersim / Virtual KITTI datasets for indoor / outdoor metric depth estimation, respectively.
@@ -62,14 +64,14 @@ Here, we take the `vitl` encoder as an example. You can also use `vitb` or `vits
 # indoor scenes
 python run.py \
   --encoder vitl \
-  --load-from checkpoints/depth_anything_v2_metric_hypersim_vitl.pth \
+  --load-from metric_depth/checkpoints/depth_anything_v2_metric_hypersim_vitl.pth \
   --max-depth 20 \
   --img-path <path> --outdir <outdir> [--input-size <size>] [--save-numpy]
 
 # outdoor scenes
 python run.py \
   --encoder vitl \
-  --load-from checkpoints/depth_anything_v2_metric_vkitti_vitl.pth \
+  --load-from metric_depth/checkpoints/depth_anything_v2_metric_vkitti_vitl.pth \
   --max-depth 80 \
   --img-path <path> --outdir <outdir> [--input-size <size>] [--save-numpy]
 ```

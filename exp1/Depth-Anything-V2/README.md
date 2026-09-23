@@ -1,3 +1,5 @@
+> 本地课程实验的运行命令与输出目录见 [实验指令汇总](../实验指令汇总.md)。课程脚本默认使用 Small 和 NYU 数据，文件路径以本仓库为基准。
+
 <div align="center">
 <h1>Depth Anything V2</h1>
 
