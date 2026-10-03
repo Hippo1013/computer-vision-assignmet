@@ -8,6 +8,8 @@ __pycache__/
 **/checkpoints/
 **/outputs/
 /exp1/Depth-Anything-V2/inputs/
+/exp1/Depth-Anything-V2/out*/
+/exp1/Depth-Anything-V2/results*/
 /exp1/Depth-Anything-V2/nyu_data/*
 !/exp1/Depth-Anything-V2/nyu_data/README.txt
 /exp2/data/
@@ -33,6 +35,13 @@ events.out.tfevents.*
 *.jpeg
 *.gif
 *.webp
+*.bmp
+*.tif
+*.tiff
+*.svg
+*.ico
+*.avif
+*.heic
 *.mp4
 *.mov
 *.pdf

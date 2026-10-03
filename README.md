@@ -28,6 +28,8 @@ git push -u origin exp1/your-name
 
 远端只维护源码、必要配置、许可证和说明，包括手写的 `.tex`、`.sty` 报告源码。模型权重、输入数据、课程课件、预测结果、点云、日志、生成图表与表格、编译后的 PDF 均由 Git 忽略。已有本地文件仍在原路径，取消跟踪不会删除它们。
 
+仓库历史也已清除图片、点云等本地实验产物。历史重写前的旧克隆请重新克隆，避免将旧历史重新推回远端。
+
 新克隆的仓库需要另行准备各实验的数据和权重；按对应的 `实验指令汇总.md` 运行后会生成结果。报告需先运行实验和 `report/prepare_results.py`，再编译，不能直接从全新克隆生成含完整图表的 PDF。
 
 `exp1/Depth-Anything-V2/` 以实际文件纳入本仓库，无需初始化子模块。上游项目为 [DepthAnything/Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2)，其说明和许可证保留在原目录中；模型的使用条件请同时参阅对应上游说明。
