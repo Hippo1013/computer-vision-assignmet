@@ -66,3 +66,7 @@ events.out.tfevents.*
 *.fls
 *.synctex.gz
 *.xdv
+
+# Final report PDFs are maintained with their editable sources
+!/exp1/report/report.pdf
+!/exp2/report/report.pdf

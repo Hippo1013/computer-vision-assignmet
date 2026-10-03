@@ -1,5 +1,6 @@
-# Reports and generated figures/tables stay local; editable sources may be tracked.
+# Keep the final report PDF; generated figures and tables stay local.
 *.pdf
+!report.pdf
 figures/
 *-table.tex
 *-rows.tex
