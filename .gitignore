@@ -1,12 +1,59 @@
-# macOS metadata and Python bytecode caches
+# Local caches and editor metadata
 .DS_Store
 __pycache__/
 *.py[cod]
+.ipynb_checkpoints/
 
-# Pretrained model weights are downloaded separately.
-/exp1/Depth-Anything-V2/checkpoints/
-/exp1/Depth-Anything-V2/metric_depth/checkpoints/
+# Runtime inputs, model weights, and generated experiment outputs
+**/checkpoints/
+**/outputs/
+/exp1/Depth-Anything-V2/inputs/
+/exp1/Depth-Anything-V2/nyu_data/*
+!/exp1/Depth-Anything-V2/nyu_data/README.txt
+/exp2/data/
 *.pth
 *.pt
 *.ckpt
+*.ckpt-*
 *.safetensors
+*.onnx
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pfm
+*.ply
+*.csv
+events.out.tfevents.*
+*.log
+
+# Course materials, downloaded assets, visualizations, and compiled documents
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mp4
+*.mov
+*.pdf
+*.ppt
+*.pptx
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+
+# Generated report figures/tables and LaTeX build intermediates
+**/report/figures/
+**/report/*-table.tex
+**/report/*-rows.tex
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.xdv

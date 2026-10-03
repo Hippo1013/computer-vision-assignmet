@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/YoYo000/MVSNet",
+  "commit": "3ae2cb2b72c6df58ebcb321d7d243d4efd01fbc5",
+  "archive_sha256": "a78ada2450b05d47c70e036ac844e8716bc0c1c9622ade462ed63839bbe8b429",
+  "local_changes": "none; modern entrypoints and adapter in exp2/mvsnet_local"
+}

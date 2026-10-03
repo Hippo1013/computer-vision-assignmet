@@ -1,3 +1,5 @@
-# The parent repository ignores PDFs; these two PDFs are intentional template assets.
-!模板预览.pdf
-!reference/original-report.pdf
+# Reports and generated figures/tables stay local; editable sources may be tracked.
+*.pdf
+figures/
+*-table.tex
+*-rows.tex

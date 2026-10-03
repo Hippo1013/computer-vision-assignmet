@@ -1,0 +1,25 @@
+\clearpage
+\subsection{深度反投影与后处理作用}
+\subsubsection{深度图到点云的坐标变换}
+
+设一个像素的齐次坐标为 $\boldsymbol p=(u,v,1)^\mathsf{T}$，相机内参为 $K$，预测深度为 $d$。这里的深度是相机坐标系中的 $Z_c$，不是三维点到光心的直线距离。由针孔投影关系
+\[
+Z_c\boldsymbol p=K\boldsymbol X_c,\qquad Z_c=d,
+\]
+可得相机坐标系中的三维点
+\[
+\boldsymbol X_c=dK^{-1}\boldsymbol p
+=\begin{bmatrix}(u-c_x)d/f_x\\(v-c_y)d/f_y\\d\end{bmatrix}.
+\]
+数据包的外参将世界点变换到相机坐标系，即 $\boldsymbol X_c=R\boldsymbol X_w+\boldsymbol t$，所以
+\[
+\boxed{\boldsymbol X_w=R^{-1}\bigl(dK^{-1}\boldsymbol p-\boldsymbol t\bigr)}.
+\]
+理想旋转矩阵满足 $R^{-1}=R^\mathsf T$；程序使用给定外参矩阵的逆变换。图像和深度图缩放后，$f_x,f_y,c_x,c_y$ 也必须按相同比例调整。本实验沿用上游单应变换的像素中心约定：数组下标 $(i,j)$ 对应 $(u,v)=(j+0.5,i+0.5)$，反投影与重投影均使用这一约定。
+
+例如，若 $f_x=f_y=500$、主点为 $(160,120)$，像素中心为 $(210,145)$，深度为 600 mm，则得到相机坐标 $(60,30,600)$ mm。同一个像素在深度改变时，会沿光心出发的射线移动；因此，深度预测的偏差会直接变成点云的位置偏差。
+
+\subsubsection{单视角点云对比}
+\ReportFigure[188bp]{single_raw_vs_filtered.png}{视角 0012 的直接反投影与过滤后结果。两图使用相同的空间显示范围；右图包含置信度过滤、几何检查和深度平均，尚未与其他参考图合并。}
+
+直接反投影能够恢复建筑的主要形状，但也会把每个不可靠的深度值变成三维点。背景、轮廓附近和遮挡处的错误预测因而形成零散点或多余表面。过滤后保留下来的点更集中于建筑主体，同时也会失去部分细节，说明后处理主要是在已有预测中筛选和调整，不能补回没有正确估计出的结构。

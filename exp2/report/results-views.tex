@@ -1,0 +1,16 @@
+\clearpage
+\section{结果分析}
+\subsection{MVSNet：不同输入视图数的结果与分析}
+
+\subsubsection{深度预测对比}
+
+我们固定其他设置，只改变每次输入的图像数量。下面选取 0012、0025 和 0043 三个参考视角，观察从不同方向拍摄时的预测结果；统计汇总仍使用全部 49 个参考视角。
+
+\ReportFigure[307bp]{depth_comparison.png}{不同输入视图数的深度预测。由左至右为参考图、3 视图深度、5 视图深度和 5 视图置信度。深度使用同一色阶，置信度图中白色表示较高、黑色表示较低，显示范围截取为 0–1。}
+
+
+\subsubsection{整体统计与局部差异}
+\input{view-comparison-table.tex}
+\ReportNote{最终保留比例与融合点数均采用置信度阈值 0.8；平均置信度和比例按 49 张等尺寸深度图统计。}
+
+\input{view-analysis.tex}
