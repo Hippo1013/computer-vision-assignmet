@@ -3,6 +3,8 @@
 import csv, json, hashlib
 from pathlib import Path
 import numpy as np
+import cv2
+from mvsnet_local.experiment import VIEW_COUNTS, PROB_THRESHOLDS
 from mvsnet_local.io import ROOT, CHECKPOINT, read_pairs, read_pfm, save_json
 from mvsnet_local.geometry import backproject, reproject, voxel_average
 
@@ -30,13 +32,18 @@ def main():
     assert len(pairs) == 49
     summary = ROOT / "outputs/summary"
     results = json.loads((summary / "results.json").read_text())
-    assert len(results["prediction"]) == 2 and len(results["fusion"]) == 6
+    assert len(results["prediction"]) == len(VIEW_COUNTS) and len(results["fusion"]) == len(PROB_THRESHOLDS) * len(VIEW_COUNTS)
+    assert {g["views"] for g in results["prediction"]} == set(VIEW_COUNTS)
+    assert {(g["views"], g["prob_threshold"]) for g in results["fusion"]} == {
+        (v, t) for v in VIEW_COUNTS for t in PROB_THRESHOLDS}
+    baseline = ROOT / "outputs" / f"views{VIEW_COUNTS[0]}" / "prediction"
+    baseline_config = json.loads((baseline / "config.json").read_text())
     checkpoint_hash = hashlib.sha256(
         Path(str(CHECKPOINT) + ".data-00000-of-00001").read_bytes()
     ).hexdigest()
     confidence_edge_cases = []
     counts = {"prediction_maps": 0, "raw_pointclouds": 0, "fused_pointclouds": 0, "masks": 0}
-    for views in [3, 5]:
+    for views in VIEW_COUNTS:
         root = ROOT / "outputs" / f"views{views}"
         pred = root / "prediction"
         config = json.loads((pred / "config.json").read_text())
@@ -47,13 +54,23 @@ def main():
             1.06,
         )
         assert config["checkpoint_sha256"] == checkpoint_hash and config["views"] == views
+        assert {k: v for k, v in config.items() if k != "views"} == {
+            k: v for k, v in baseline_config.items() if k != "views"}
         data = {i: dict(np.load(pred / f"{i:08d}.npz")) for i in pairs}
+        timing = json.loads((pred / "inference_timing.json").read_text())["per_view"]
+        assert {int(i) for i in timing} == set(pairs)
+        for threshold in PROB_THRESHOLDS:
+            fc = json.loads((root / f"fusion/prob_{round(threshold*100):03d}/config.json").read_text())
+            assert fc["prediction_config"] == config
+            assert (fc["input_views"], fc["candidate_sources"], fc["min_consistent_sources"],
+                    fc["pixel_threshold"], fc["relative_depth_threshold"], fc["voxel_size_mm"],
+                    fc["pixel_center"], fc["prob_threshold"]) == (views, 10, 2, 1.0, 0.01, 0.5, 0.5, threshold)
         confidence = []
         fractions = []
         raw_count = 0
         all_raw_positions = []
         all_raw_colors = []
-        retained = {t: 0 for t in [0.6, 0.8, 0.95]}
+        retained = {t: 0 for t in PROB_THRESHOLDS}
         fusion_rows = {
             t: list(csv.DictReader(open(root / f"fusion/prob_{round(t*100):03d}/metrics.csv")))
             for t in retained
@@ -61,6 +78,9 @@ def main():
         positions = {t: [] for t in retained}
         colors = {t: [] for t in retained}
         for index, ref in data.items():
+            with np.load(baseline / f"{index:08d}.npz") as base:
+                for key in ("rgb", "K", "E", "depth_values"):
+                    np.testing.assert_array_equal(ref[key], base[key])
             assert ref["depth"].shape == (216, 288) and ref["rgb"].shape == (216, 288, 3)
             assert ref["source_ids"].tolist() == pairs[index][: views - 1]
             assert np.isfinite(ref["depth"]).all() and np.isfinite(ref["confidence"]).all()
@@ -84,6 +104,16 @@ def main():
             np.testing.assert_array_equal(
                 read_pfm(pred / f"{index:08d}_prob.pfm"), ref["confidence"]
             )
+            assert len(ref["source_ids"]) == views - 1
+            assert timing[str(index)]["source_ids"] == ref["source_ids"].tolist()
+            expected_png = cv2.applyColorMap(
+                np.uint8(np.clip((ref["depth"] - 425) / (935 - 425), 0, 1) * 255),
+                cv2.COLORMAP_TURBO)
+            np.testing.assert_array_equal(cv2.imread(str(pred / f"{index:08d}_depth.png")), expected_png)
+            np.testing.assert_array_equal(cv2.imread(str(pred / f"{index:08d}_prob.png"), 0),
+                                          np.uint8(np.clip(ref["confidence"], 0, 1) * 255))
+            np.testing.assert_array_equal(cv2.imread(str(pred / f"{index:08d}_rgb.png")),
+                                          cv2.cvtColor(ref["rgb"], cv2.COLOR_RGB2BGR))
             counts["prediction_maps"] += 1
             xyz, rgb = ply(root / f"raw/{index:08d}.ply")
             expected = backproject(ref["depth"], ref["K"], ref["E"])
@@ -144,8 +174,8 @@ def main():
                 and group["raw_points"] == raw_count
             )
             counts["fused_pointclouds"] += 1
-    assert len(list(csv.DictReader(open(summary / "prediction_metrics.csv")))) == 98
-    assert len(list(csv.DictReader(open(summary / "fusion_metrics.csv")))) == 294
+    assert len(list(csv.DictReader(open(summary / "prediction_metrics.csv")))) == 49 * len(VIEW_COUNTS)
+    assert len(list(csv.DictReader(open(summary / "fusion_metrics.csv")))) == 49 * len(PROB_THRESHOLDS) * len(VIEW_COUNTS)
     assert json.loads((summary / "model_parity.json").read_text())["passed"]
     assert json.loads((summary / "geometry_checks.json").read_text())["passed"]
     output = {
@@ -154,11 +184,13 @@ def main():
         "upstream_confidence_edge_cases": confidence_edge_cases,
         "checkpoint_sha256": checkpoint_hash,
         "checks": [
-            "all PFM/NPZ equality",
+            "all PFM/NPZ equality and PNG visualization equality",
+            "source selection, timing coverage and fusion configuration binding",
+            "identical reference RGB, cameras, depth hypotheses and non-view settings across groups",
             "all raw PLY backprojections and colors",
-            "all 980 source reprojections",
+            f"all {49 * 10 * len(VIEW_COUNTS)} source reprojections",
             "all masks and averaged depths",
-            "all six fused PLY positions and colors after voxel merging",
+            f"all {len(PROB_THRESHOLDS) * len(VIEW_COUNTS)} fused PLY positions and colors after voxel merging",
             "confidence threshold nesting",
             "prediction/fusion table row counts and aggregate values",
         ],

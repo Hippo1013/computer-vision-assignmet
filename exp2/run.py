@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""深度预测：python run.py --views 3 / --views 5。"""
+"""深度预测：python run.py --views 3 / --views 7 / --views 11。"""
 import argparse, hashlib, json, time, platform
 from pathlib import Path
 import cv2
 import numpy as np
+from mvsnet_local.experiment import REPORT_VIEWS
 from mvsnet_local.io import ROOT, DATA, CHECKPOINT, read_pairs, load_view, write_pfm, save_json
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--views", type=int, default=5, choices=range(2, 12))
+    p.add_argument("--views", type=int, default=REPORT_VIEWS, choices=range(2, 12))
     p.add_argument("--width", type=int, default=1152)
     p.add_argument("--height", type=int, default=864)
     p.add_argument("--max-d", type=int, default=192)
@@ -38,6 +39,8 @@ def main():
     ids = args.ids or list(pairs)
     if set(ids) - pairs.keys():
         p.error("ids 必须来自 pair.txt 的参考视角")
+    if any(len(pairs[i]) < args.views - 1 for i in ids):
+        p.error("配对文件中的源图数量不足，无法满足 --views")
     checkpoint_hash = hashlib.sha256(
         Path(str(args.checkpoint) + ".data-00000-of-00001").read_bytes()
     ).hexdigest()

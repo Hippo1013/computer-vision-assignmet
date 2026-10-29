@@ -2,6 +2,7 @@
 """汇总已完成的预测、几何过滤与融合；不重新推理。"""
 import csv, json
 import numpy as np
+from mvsnet_local.experiment import VIEW_COUNTS, PROB_THRESHOLDS
 from mvsnet_local.io import ROOT, save_json
 
 
@@ -19,7 +20,7 @@ def main():
     predictions = []
     groups = []
     all_rows = []
-    for views in [3, 5]:
+    for views in VIEW_COUNTS:
         root = ROOT / "outputs" / f"views{views}"
         timing = root / "prediction/inference_timing.json"
         if timing.exists():
@@ -32,7 +33,10 @@ def main():
                     }
                 )
         for summary in sorted(root.glob("fusion/*/summary.json")):
-            groups.append(json.loads(summary.read_text()))
+            group = json.loads(summary.read_text())
+            if group["prob_threshold"] not in PROB_THRESHOLDS:
+                continue
+            groups.append(group)
             for row in csv.DictReader(open(summary.with_name("metrics.csv"))):
                 all_rows.append(
                     {"views": views, "prob_threshold": groups[-1]["prob_threshold"], **row}
@@ -41,7 +45,7 @@ def main():
     write_csv(out / "fusion_metrics.csv", all_rows)
     write_csv(out / "fusion_summary.csv", groups)
     means = []
-    for views in [3, 5]:
+    for views in VIEW_COUNTS:
         rows = [r for r in predictions if r["views"] == views]
         if rows:
             means.append(

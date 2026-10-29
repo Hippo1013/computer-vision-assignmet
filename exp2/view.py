@@ -2,12 +2,13 @@
 """交互点云查看：鼠标拖动旋转、滚轮缩放。"""
 import argparse
 import numpy as np
+from mvsnet_local.experiment import REPORT_VIEWS
 from mvsnet_local.io import ROOT
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--views", type=int, default=5, choices=[3, 5])
+    p.add_argument("--views", type=int, default=REPORT_VIEWS, choices=range(2, 12))
     p.add_argument("--kind", choices=["raw", "fusion"], default="fusion")
     p.add_argument("--prob-threshold", type=float, default=0.8)
     p.add_argument("--image-id", type=int, help="仅 raw 使用；省略则显示全部视角")

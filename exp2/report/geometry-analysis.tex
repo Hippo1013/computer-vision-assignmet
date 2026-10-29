@@ -1,25 +1,30 @@
-\clearpage
 \subsection{深度反投影与后处理作用}
 \subsubsection{深度图到点云的坐标变换}
 
-设一个像素的齐次坐标为 $\boldsymbol p=(u,v,1)^\mathsf{T}$，相机内参为 $K$，预测深度为 $d$。这里的深度是相机坐标系中的 $Z_c$，不是三维点到光心的直线距离。由针孔投影关系
+设世界坐标系中的三维点为 $P=(X,Y,Z)^\mathsf{T}$，相机坐标为 $P_c=(X_c,Y_c,Z_c)^\mathsf{T}$，图像点的齐次坐标为 $x=(u,v,1)^\mathsf{T}$。相机的成像关系为
 \[
-Z_c\boldsymbol p=K\boldsymbol X_c,\qquad Z_c=d,
+\begin{bmatrix}u\\v\\1\end{bmatrix}
+=\frac{1}{Z_c}
+\underbrace{\begin{bmatrix}f_x&0&c_x\\0&f_y&c_y\\0&0&1\end{bmatrix}}_{K}
+\underbrace{\begin{bmatrix}R&t\end{bmatrix}}_{T}
+\begin{bmatrix}P\\1\end{bmatrix},
 \]
-可得相机坐标系中的三维点
+其中 $K$ 为内参矩阵，$T=[R\ t]$ 为外参矩阵，满足 $P_c=RP+t$。预测深度 $d=Z_c$，即三维点在相机坐标系中的深度。由 $Z_cx=KP_c$ 可得
 \[
-\boldsymbol X_c=dK^{-1}\boldsymbol p
+P_c=dK^{-1}x
 =\begin{bmatrix}(u-c_x)d/f_x\\(v-c_y)d/f_y\\d\end{bmatrix}.
 \]
-数据包的外参将世界点变换到相机坐标系，即 $\boldsymbol X_c=R\boldsymbol X_w+\boldsymbol t$，所以
+再由外参关系反解，即可得到世界坐标系中的点云坐标
 \[
-\boxed{\boldsymbol X_w=R^{-1}\bigl(dK^{-1}\boldsymbol p-\boldsymbol t\bigr)}.
+\boxed{P=R^{-1}(P_c-t)=R^{-1}\bigl(dK^{-1}x-t\bigr)}.
 \]
-理想旋转矩阵满足 $R^{-1}=R^\mathsf T$；程序使用给定外参矩阵的逆变换。图像和深度图缩放后，$f_x,f_y,c_x,c_y$ 也必须按相同比例调整。本实验沿用上游单应变换的像素中心约定：数组下标 $(i,j)$ 对应 $(u,v)=(j+0.5,i+0.5)$，反投影与重投影均使用这一约定。
+旋转矩阵满足 $R^{-1}=R^\mathsf T$。图像和深度图缩放后，$f_x,f_y,c_x,c_y$ 也必须按相同比例调整。本实验中，数组下标 $(i,j)$ 对应像素中心 $(u,v)=(j+0.5,i+0.5)$，反投影与重投影均使用这一约定。
 
 例如，若 $f_x=f_y=500$、主点为 $(160,120)$，像素中心为 $(210,145)$，深度为 600 mm，则得到相机坐标 $(60,30,600)$ mm。同一个像素在深度改变时，会沿光心出发的射线移动；因此，深度预测的偏差会直接变成点云的位置偏差。
 
 \subsubsection{单视角点云对比}
-\ReportFigure[188bp]{single_raw_vs_filtered.png}{视角 0012 的直接反投影与过滤后结果。两图使用相同的空间显示范围；右图包含置信度过滤、几何检查和深度平均，尚未与其他参考图合并。}
+下面比较 7 视图组中 0012、0025 和 0043 三个参考视角的点云，观察置信度阈值 0.8 下后处理前后的变化。
 
-直接反投影能够恢复建筑的主要形状，但也会把每个不可靠的深度值变成三维点。背景、轮廓附近和遮挡处的错误预测因而形成零散点或多余表面。过滤后保留下来的点更集中于建筑主体，同时也会失去部分细节，说明后处理主要是在已有预测中筛选和调整，不能补回没有正确估计出的结构。
+\ReportFigure[286bp]{single_views_comparison.png}{三个参考视角的点云对比。上排为直接反投影，下排为过滤与深度平均；同一列使用相同的观察方向和空间范围。}
+
+三组中，过滤后的建筑主体形状基本不变，外围杂点均有所减少。0012 的变化较小，0025、0043 上方的杂点减少更明显，但部分轮廓也有丢点，说明后处理在减少杂点的同时也会损失局部细节。

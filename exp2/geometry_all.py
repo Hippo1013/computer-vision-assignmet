@@ -4,14 +4,15 @@ import argparse, csv, json, time
 from pathlib import Path
 import cv2
 import numpy as np
+from mvsnet_local.experiment import VIEW_COUNTS, PROB_THRESHOLDS
 from mvsnet_local.io import ROOT, read_pairs, write_ply, save_json
 from mvsnet_local.geometry import backproject, reproject, voxel_average
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--views", type=int, nargs="+", default=[3, 5], choices=[3, 5])
-    parser.add_argument("--prob-threshold", type=float, nargs="+", default=[0.6, 0.8, 0.95])
+    parser.add_argument("--views", type=int, nargs="+", default=list(VIEW_COUNTS), choices=range(2, 12))
+    parser.add_argument("--prob-threshold", type=float, nargs="+", default=list(PROB_THRESHOLDS))
     parser.add_argument("--pixel-threshold", type=float, default=1.0)
     parser.add_argument("--depth-threshold", type=float, default=0.01)
     parser.add_argument(
