@@ -13,15 +13,21 @@ PARAMETERS={'resnet10':4949412,'resnet18':11220132,'resnet50':23705252}
 def main():
     parser=argparse.ArgumentParser(__doc__)
     parser.add_argument('--replay',action='store_true')
+    parser.add_argument('--normal-batch',action='store_true')
     args=parser.parse_args()
-    root=BASE/'outputs/stage45_20261029'
+    root=BASE/'outputs'/('stage4_batch_20261029' if args.normal_batch else 'stage45_20261029')
     protocol=read(root/'protocol.json');config=protocol['config'];common=config['common'];capacity=protocol['capacity']
     assert read(root/'status.json')['state']=='stage4_complete_awaiting_user'
     assert read(root/'runner_status.json')['state']=='stage4_complete_awaiting_user'
     assert config['stage5']['enabled'] is False
     assert not read(root/'status.json')['stage5_started']
-    assert common['epochs']==50 and common['seed']==20261029 and common['effective_batch_size']==1280
-    assert text_digest_matches(BASE/'train_stage45.py',protocol['source_sha256'])
+    assert common['epochs']==50 and common['seed']==20261029
+    if args.normal_batch:
+        assert common['update_rule']=='one_optimizer_step_per_batch' and common['batch_sizes']=={'resnet18':640,'resnet50':160}
+        assert all(protocol['preflight_checks'].values())
+        assert text_digest_matches(BASE/'train_stage45.py',protocol['model_factory_source_sha256'])
+    else:assert common['effective_batch_size']==1280
+    assert text_digest_matches(BASE/('train_stage4_batch.py' if args.normal_batch else 'train_stage45.py'),protocol['source_sha256'])
     assert text_digest_matches(BASE/'train_stage1.py',protocol['shared_source_sha256'])
     assert text_digest_matches(BASE/'cv_homework2/resnet-cifar100.py',protocol['model_source_sha256'])
     assert all(capacity['checks'].values())
@@ -37,13 +43,15 @@ def main():
         h=read(folder/'history.json');histories[name]=h
         assert [r['epoch'] for r in h]==list(range(1,51))
         effective=read(folder/'config.json');micro=capacity['micro_batch_sizes'][run['architecture']]
-        assert effective['micro_batch_size']==micro and 1280%micro==0
+        assert effective['batch_size' if args.normal_batch else 'micro_batch_size']==micro
+        if args.normal_batch:assert micro==common['batch_sizes'][run['architecture']]
+        else:assert 1280%micro==0
         assert all(effective[k]==v for k,v in common.items())
         assert all(effective[k]==v for k,v in run.items())
         assert effective['initial_state_sha256']==capacity['initial_state_sha256'][run['architecture']]
         assert effective['training_count']==50000 and effective['test_count']==10000
         for row in h:
-            assert row['training_count']==50000 and row['optimizer_updates']==40
+            assert row['training_count']==50000 and row['optimizer_updates']==(math.ceil(50000/micro) if args.normal_batch else 40)
             assert math.isfinite(row['train_loss']) and math.isfinite(row['test']['loss'])
             assert row['train_ce_loss']==row['train_loss'] and row['train_distill_loss']==0.
             expected=run['lr']*.1**sum(row['epoch']>m for m in [30,40])

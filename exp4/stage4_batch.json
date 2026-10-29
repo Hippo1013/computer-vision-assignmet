@@ -1,0 +1,64 @@
+{
+  "common": {
+    "seed": 20261029,
+    "epochs": 50,
+    "precision": "FP32",
+    "update_rule": "one_optimizer_step_per_batch",
+    "batch_sizes": {
+      "resnet18": 640,
+      "resnet50": 160
+    }
+  },
+  "stage4": [
+    {
+      "id": "resnet18_sgd",
+      "architecture": "resnet18",
+      "optimizer": "sgd",
+      "lr": 0.1,
+      "milestones": [
+        30,
+        40
+      ]
+    },
+    {
+      "id": "resnet18_adam",
+      "architecture": "resnet18",
+      "optimizer": "adam",
+      "lr": 0.001,
+      "milestones": [
+        30,
+        40
+      ]
+    },
+    {
+      "id": "resnet50_sgd",
+      "architecture": "resnet50",
+      "optimizer": "sgd",
+      "lr": 0.1,
+      "milestones": [
+        30,
+        40
+      ]
+    },
+    {
+      "id": "resnet50_adam",
+      "architecture": "resnet50",
+      "optimizer": "adam",
+      "lr": 0.001,
+      "milestones": [
+        30,
+        40
+      ]
+    }
+  ],
+  "stage5": {
+    "enabled": false,
+    "temperature": 2.0,
+    "soft_weight": 0.5,
+    "logits_weight": 0.1,
+    "selection": "highest last-epoch accuracy; declared order breaks ties",
+    "teacher_checkpoint": "last.pt",
+    "require_teacher_better": true,
+    "reason": "User requests stage-four report before starting stage five"
+  }
+}

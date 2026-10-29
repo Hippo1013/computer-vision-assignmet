@@ -10,7 +10,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-RUNS=['stage1_20261029_train_test','adam_extra_lr_20261029','stage45_20261029']
+RUNS=['stage1_20261029_train_test','adam_extra_lr_20261029','stage45_20261029','stage4_batch_20261029']
 
 
 def remote_python(code):

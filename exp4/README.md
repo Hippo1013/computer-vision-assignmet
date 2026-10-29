@@ -95,7 +95,9 @@ Windows运行器为`run_adam_extra.py`，任务名`MachineVision-Exp4-AdamExtra-
 
 补充阶段自检：实验设置和四组指标已逐项核对，表格与曲线一致，百分比/百分点使用正确；标题为名词短语，分析不贴代码、不写来源制作说明，不从单种子推到所有网络。曲线已打开检查图例、轴名与裁剪。当前只交付补充分析，不生成整份正式报告PDF，PDF页数/逐页排版检查不适用；第4–6项与最终报告仍未完成，等待用户后续决定。
 
-## 第四步网络比较
+## 第四步梯度累积试运行（已停止）
+
+以下为原梯度累积方案的历史记录。用户随后要求每个实际batch更新一次，新方案见文末；不再恢复该试运行。
 
 用户已批准ResNet18/50各运行SGD与Adam动态学习率，共四组、各50轮。SGD为0.1→0.01→0.001，Adam为0.001→0.0001→0.00001，均完成第30/40轮后衰减。完整50000张训练、每轮10000张测试、不划验证集，种子20261029，FP32、原增强与GPU常驻uint8数据不变。
 
@@ -123,3 +125,13 @@ Windows运行器为`run_adam_extra.py`，任务名`MachineVision-Exp4-AdamExtra-
 第四步后台任务`MachineVision-Exp4-Stage4-20261029`已启动，独立于SSH连接；初始ResNet18 SGD前5轮运行正常，单轮训练约36.1秒、含测试约38.0秒。ResNet50在容量试跑中约363张/秒，深网络正式耗时另核验。完成四组后停止并汇报，自动结果跟进只负责检查和交付第四步，不会启动第五步。
 
 第四步检查点规模更大，结果拉取入口已改为唯一Windows系统临时目录中流式ZIP、SCP下载及两端SHA-256核对，本地同样使用`mktemp -d`临时目录；避免把全部权重压缩包和base64字符串同时堆入内存。传输后自动清理两端临时目录，原CLI和输出位置不变。元数据流式传输已经实测通过，大权重在训练完成后取回。
+
+## 第四步普通批量训练
+
+用户最新要求取消有效批1280的梯度累积，改为每个实际batch执行一次zero_grad、前向、反向与optimizer.step。保留已验证的实际批大小：ResNet18为640，ResNet50为160；同网络SGD/Adam一致。每轮分别79/313次更新，最后一批均80张。50轮、原动态学习率、种子20261029、FP32、完整50000训练/10000测试及GPU常驻增强不变。网络和批大小/更新次数同时变化，与旧10层结果比较时明确该限制。
+
+旧`outputs/stage45_20261029/`已在检查点处暂停并保留，不将它的部分曲线混入新方案。新入口`train_stage4_batch.py`、配置`stage4_batch.json`、输出`outputs/stage4_batch_20261029/`，从相同随机初始权重重新运行四组。复用冻结的模型工厂与容量记录，不修改旧训练实现和数据。新入口的batch_update不拆分输入、不累积梯度，每次函数调用即一次参数更新。
+
+Windows后台运行器`run_stage4_batch.py`，任务名`MachineVision-Exp4-Stage4Batch-20261029`。预检命令：`python exp4/train_stage4_batch.py --preflight-only`；正式训练：`python exp4/train_stage4_batch.py`。本地结果：`python exp4/fetch_stage1.py --run stage4_batch_20261029`，可加`--weights`。汇总：`python exp4/summarize_stage45.py --normal-batch`；核验：`python exp4/verify_stage45.py --normal-batch`，Windows同环境可加`--replay`。
+
+第四步完成后仍必须停止并先汇报，第五步保持禁用，不因老师更好而自动继续。当前正在迁移方案并进行新更新规则的预检。
