@@ -1,4 +1,4 @@
-"""Measure Windows loader startup and steady-state throughput, using training images only."""
+"""Measure Windows loader startup and steady-state throughput, with identical FP32 model/batch and official test evaluation."""
 import argparse
 import json
 import time
@@ -13,6 +13,7 @@ import train_stage1 as training
 def main():
     p=argparse.ArgumentParser(__doc__)
     p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--full',action='store_true')
     args=p.parse_args()
     torch.set_num_threads(4)
     torch.backends.cudnn.benchmark=False
@@ -24,16 +25,16 @@ def main():
     ef=transforms.Compose([transforms.ToTensor(),transforms.Normalize((.5,)*3,(.5,)*3)])
     data=training.BASE/'cv_homework2/data'
     train_all=torchvision.datasets.CIFAR100(str(data),train=True,transform=tf)
-    val_all=torchvision.datasets.CIFAR100(str(data),train=True,transform=ef)
-    ids,vids=list(range(16384)),list(range(5000))
-    train=Subset(train_all,ids[:16384]);val=Subset(val_all,vids)
+    val_all=torchvision.datasets.CIFAR100(str(data),train=False,transform=ef)
+    train= train_all if args.full else Subset(train_all,list(range(16384)))
+    val=val_all
     results=[]
-    for workers in [0,2,4]:
+    for workers,persistent in [(4,False),(0,False),(2,True),(4,True)]:
         training.seed_all(20261029)
         model=training.model_new(device)
-        optimizer=training.optimizer_new(model,{'optimizer':'adam','lr':.001})
-        loader=DataLoader(train,batch_size=256,shuffle=True,num_workers=workers,pin_memory=True,persistent_workers=workers>0,worker_init_fn=training.seed_worker,generator=torch.Generator().manual_seed(20261029))
-        vloader=DataLoader(val,batch_size=256,num_workers=workers,pin_memory=True,persistent_workers=workers>0)
+        optimizer=training.optimizer_new(model,{'optimizer':'sgd','lr':.001})
+        loader=DataLoader(train,batch_size=256,shuffle=True,num_workers=workers,pin_memory=True,persistent_workers=persistent,worker_init_fn=training.seed_worker,generator=torch.Generator().manual_seed(20261029))
+        vloader=DataLoader(val,batch_size=256,num_workers=workers,pin_memory=True,persistent_workers=persistent)
         # Warm GPU kernels before comparing process startup and steady state.
         x=torch.randn(256,3,32,32,device=device);y=torch.zeros(256,dtype=torch.long,device=device)
         for _ in range(3):
@@ -52,7 +53,7 @@ def main():
                 loss.item();(z.argmax(1)==y).sum().item();total+=len(y)
             torch.cuda.synchronize();seconds=time.perf_counter()-start
             vstart=time.perf_counter();metrics=training.evaluate(model,vloader,device)[0];torch.cuda.synchronize()
-            row={'workers':workers,'persistent':workers>0,'pass':epoch,'training_samples':total,'train_seconds':seconds,'train_images_per_second':total/seconds,'evaluation_seconds':time.perf_counter()-vstart,'evaluation_samples':metrics['count']}
+            row={'workers':workers,'persistent':persistent,'pass':epoch,'training_samples':total,'train_seconds':seconds,'train_images_per_second':total/seconds,'evaluation_seconds':time.perf_counter()-vstart,'evaluation_samples':metrics['count'],'batch_size':256,'precision':'FP32','optimizer':'sgd'}
             results.append(row);training.write_json(args.output,results);print(json.dumps(row),flush=True)
         del loader,vloader,model,optimizer
         torch.cuda.empty_cache()
