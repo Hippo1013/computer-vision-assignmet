@@ -21,6 +21,13 @@ def digest(path):
     return h.hexdigest()
 
 
+def text_digest_matches(path, expected):
+    raw=path.read_bytes()
+    lf=raw.replace(b'\r\n',b'\n')
+    # Git on Windows checks out CRLF; compare equivalent text without weakening data checks.
+    return any(hashlib.sha256(x).hexdigest()==expected for x in [raw,lf,lf.replace(b'\n',b'\r\n')])
+
+
 def main():
     p=argparse.ArgumentParser(__doc__)
     p.add_argument('--output',type=Path,default=BASE/'outputs/stage1_20261029_train_test')
@@ -36,8 +43,8 @@ def main():
     assert protocol['data_protocol']['training_count']==50000
     assert protocol['data_protocol']['test_count']==10000
     assert protocol['data_protocol']['validation_count']==0
-    assert digest(BASE/'train_stage1.py')==protocol['source_sha256']
-    assert digest(BASE/'cv_homework2/resnet-cifar100.py')==protocol['model_sha256']
+    assert text_digest_matches(BASE/'train_stage1.py',protocol['source_sha256'])
+    assert text_digest_matches(BASE/'cv_homework2/resnet-cifar100.py',protocol['model_sha256'])
     data=BASE/'cv_homework2/data/cifar-100-python'
     with (data/'test').open('rb') as f:
         targets=pickle.load(f,encoding='latin1')['fine_labels']
