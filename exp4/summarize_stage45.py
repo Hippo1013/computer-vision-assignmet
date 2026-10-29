@@ -49,10 +49,20 @@ def main():
             h=histories[label]
             for ax,key,ylabel in [(axes[0],'train_loss','Training loss'),(axes[1],'accuracy','Test accuracy (%)'),(axes[2],'lr','Learning rate')]:
                 values=[100*r['test']['accuracy'] if key=='accuracy' else r[key] for r in h]
-                ax.plot([r['epoch'] for r in h],values,label=label)
+                batch=next(r['micro_batch_size'] for r in rows if r['architecture']==architecture and r['optimizer']==optimizer)
+                ax.plot([r['epoch'] for r in h],values,label=f'{architecture} (B={batch})')
                 ax.set(xlabel='Epoch',ylabel=ylabel);ax.grid(alpha=.2)
         axes[2].set_yscale('log');axes[0].legend(fontsize=8)
         fig.savefig(root/('networks_'+optimizer+'.png'),dpi=180);plt.close(fig)
+    fig,axes=plt.subplots(1,2,figsize=(10,3.5),layout='constrained')
+    names=['resnet10','resnet18','resnet50']; positions=list(range(3))
+    axes[0].bar(positions,[next(r['parameters'] for r in rows if r['architecture']==n)/1e6 for n in names])
+    axes[0].set(xticks=positions,xticklabels=names,ylabel='Parameters (million)')
+    for i,optimizer in enumerate(['sgd','adam']):
+        values=[next(r['train_minutes'] for r in rows if r['architecture']==n and r['optimizer']==optimizer) for n in names]
+        axes[1].bar([x+(-.18 if i==0 else .18) for x in positions],values,width=.36,label=optimizer.upper())
+    axes[1].set(xticks=positions,xticklabels=names,ylabel='50-epoch training time (min)');axes[1].legend(fontsize=8)
+    fig.savefig(root/'network_costs.png',dpi=180);plt.close(fig)
     print('\n'.join(lines))
 
 
