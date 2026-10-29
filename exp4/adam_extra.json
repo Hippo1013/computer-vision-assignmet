@@ -1,0 +1,6 @@
+{
+  "runs": [
+    {"id": "adam_lr001", "optimizer": "adam", "lr": 0.01},
+    {"id": "adam_lr01", "optimizer": "adam", "lr": 0.1}
+  ]
+}
