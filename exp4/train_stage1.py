@@ -295,7 +295,7 @@ def preflight(common, trainset, out, device):
     # Include resident data, leave 384 MiB for the display and allocation fluctuations.
     budget = torch.cuda.memory_allocated() + free - 384 * 1024**2
     candidates = []
-    for batch in [256,512,1024,1536,2048,3072,4096]:
+    for batch in [256,512,1024,1280,1536]:
         try:
             row = probe_batch(trainset,batch,common['seed'],device)
             row['within_budget'] = row['peak_allocated_bytes'] <= budget
@@ -305,7 +305,7 @@ def preflight(common, trainset, out, device):
             candidates.append({'batch_size':batch,'passed':False,'reason':'CUDA OOM'})
         gc.collect()
         torch.cuda.empty_cache()
-        if not candidates[-1]['passed']:
+        if not candidates[-1]['passed'] or not candidates[-1].get('within_budget', False):
             break
     valid = [r for r in candidates if r['passed'] and r['within_budget']]
     if not valid:

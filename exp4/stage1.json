@@ -5,7 +5,7 @@
     "batch_size": 256,
     "workers": 0,
     "data_pipeline": "cuda_resident_uint8",
-    "batch_size_selection": "capacity_probe_256_to_4096"
+    "batch_size_selection": "capacity_probe_up_to_dedicated_memory_budget"
   },
   "runs": [
     {
