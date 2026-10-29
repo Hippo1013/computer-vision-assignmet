@@ -1,6 +1,6 @@
 # 机器视觉实验报告
 
-Git 保留手写 LaTeX 源码、样式、生成脚本和最终 `report.pdf`。`figures/` 和自动生成的表格只保留在本地。全新克隆后可直接查看现成 PDF；如需重新编译，应先按实验指令准备数据和权重、运行实验，再执行 `prepare_results.py` 生成图表。
+Git 保留手写 LaTeX 源码、样式、生成脚本和最终 `实验一.pdf`。`figures/` 和自动生成的表格只保留在本地。全新克隆后可直接查看现成 PDF；如需重新编译，应先按实验指令准备数据和权重、运行实验，再执行 `prepare_results.py` 生成图表。
 
 采用“青蓝实验报告”XeLaTeX 模板，包含“实验设置”“结果分析”“总结”三部分：2.1 比较输入尺寸，2.2 比较两种模型的精度并讨论尺度信息的作用，第三部分总结学习方法的效果、补充深度信息的收获及主动多视角观测的后续方向。
 
@@ -11,13 +11,13 @@ Git 保留手写 LaTeX 源码、样式、生成脚本和最终 `report.pdf`。`f
 - `conclusion.tex`：第三部分总结。
 - `prepare_results.py`：从实验输出生成 `figures/` 图片、两个 `relative-*-rows.tex` 表格文件、`model-comparison-table.tex` 及 `alignment-gap-table.tex`。
 - `qinglan-report.sty`：青蓝样式。
-- `report.pdf`：当前预览。
+- `实验一.pdf`：当前预览。
 
 编译：
 
 ```bash
 cd report
-bash build.sh main.tex report.pdf
+bash build.sh main.tex 实验一.pdf
 ```
 
 需要 XeLaTeX 和 latexmk。编译辅助文件自动放入系统临时目录并清理。
