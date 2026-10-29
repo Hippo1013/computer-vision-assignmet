@@ -13,8 +13,6 @@ import numpy as np
 import torch
 import torchvision
 from torch import nn
-from torch.utils.data import DataLoader, Subset
-from torchvision import transforms
 
 BASE = Path(__file__).resolve().parent
 
@@ -64,11 +62,44 @@ def optimizer_new(model, config):
     return torch.optim.Adam(model.parameters(), lr=config['lr'], betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-4)
 
 
-def loader_new(dataset, batch, workers, seed, shuffle):
-    generator = torch.Generator().manual_seed(seed)
-    return DataLoader(dataset, batch_size=batch, shuffle=shuffle, num_workers=workers,
-                      worker_init_fn=seed_worker, generator=generator, pin_memory=True,
-                      persistent_workers=False)
+class DeviceCIFAR:
+    """Raw uint8 images stay on CUDA; augmentations are sampled per image."""
+    def __init__(self, dataset, device, training):
+        self.images = torch.from_numpy(dataset.data).permute(0, 3, 1, 2).contiguous().to(device)
+        self.labels = torch.tensor(dataset.targets, dtype=torch.long, device=device)
+        self.device, self.training = device, training
+
+    def __len__(self):
+        return len(self.images)
+
+    def batches(self, batch, seed, shuffle):
+        generator = torch.Generator(device=self.device).manual_seed(seed)
+        order = torch.randperm(len(self), device=self.device, generator=generator) if shuffle else torch.arange(len(self), device=self.device)
+        for start in range(0, len(self), batch):
+            ids = order[start:start + batch]
+            x = self.images[ids]
+            if self.training:
+                n = len(ids)
+                flips = torch.rand((n, 1, 1, 1), device=self.device, generator=generator) < .5
+                ys = torch.randint(0, 9, (n,), device=self.device, generator=generator)
+                xs = torch.randint(0, 9, (n,), device=self.device, generator=generator)
+                x = augment_uint8(x, flips, ys, xs)
+            yield x.float().div_(255).sub_(.5).div_(.5), self.labels[ids]
+
+
+def augment_uint8(x, flips, ys, xs):
+    x = torch.where(flips, x.flip(-1), x)
+    x = nn.functional.pad(x, (4, 4, 4, 4))
+    axis = torch.arange(32, device=x.device)
+    rows, cols = ys[:, None] + axis, xs[:, None] + axis
+    # Gather independently sampled crops from zero-padded images.
+    x = x.permute(0, 2, 3, 1)[torch.arange(len(x), device=x.device)[:, None, None],
+                              rows[:, :, None], cols[:, None, :]]
+    return x.permute(0, 3, 1, 2).contiguous()
+
+
+class PauseRequested(Exception):
+    pass
 
 
 def evaluate(model, loader, device):
@@ -111,6 +142,8 @@ def load_checkpoint(path, model, optimizer=None):
 
 
 def run_one(config, common, trainset, testset, out, device):
+    if (out / 'pause.request').exists():
+        raise PauseRequested(config['id'])
     folder = out / config['id']
     folder.mkdir(exist_ok=True)
     effective = {**common, **config, 'training_count': len(trainset), 'test_count': len(testset)}
@@ -127,10 +160,11 @@ def run_one(config, common, trainset, testset, out, device):
         state = load_checkpoint(last, model, optimizer)
         history, best, start = state['history'], state['best'], state['epoch'] + 1
     for epoch in range(start, common['epochs'] + 1):
-        # Epoch-specific seeds make data augmentation and ordering restartable on Windows spawn.
+        if (out / 'pause.request').exists():
+            raise PauseRequested(config['id'])
         seed_all(common['seed'] + epoch)
-        train_loader = loader_new(trainset, common['batch_size'], common['workers'], common['seed'] + epoch, True)
-        test_loader = loader_new(testset, common['batch_size'], common['workers'], common['seed'], False)
+        train_loader = trainset.batches(common['batch_size'], common['seed'] + epoch, True)
+        test_loader = testset.batches(common['batch_size'], common['seed'], False)
         lr = lr_at(config, epoch)
         for group in optimizer.param_groups:
             group['lr'] = lr
@@ -178,59 +212,110 @@ def run_one(config, common, trainset, testset, out, device):
     return state['history']
 
 
-def preflight(common, trainset, out, device):
-    assert [lr_at({'lr': .1, 'milestones': [30, 40]}, e) for e in [1,30,31,40,41,50]] == [.1,.1,.010000000000000002,.010000000000000002,.0010000000000000002,.0010000000000000002]
+def probe_batch(trainset, batch, seed, device):
+    seed_all(seed)
+    model = model_new(device)
+    optimizer = optimizer_new(model, {'optimizer': 'adam', 'lr': .001})
+    batches = trainset.batches(batch, seed, True)
+    def step():
+        x, y = next(batches)
+        optimizer.zero_grad(set_to_none=True)
+        z = model(x)
+        loss = nn.functional.cross_entropy(z, y)
+        assert torch.isfinite(loss)
+        loss.backward()
+        optimizer.step()
+        loss.item()
+        (z.argmax(1) == y).sum().item()
+    torch.cuda.reset_peak_memory_stats()
+    for _ in range(2):
+        step()
+    torch.cuda.synchronize()
+    t0 = time.perf_counter()
+    for _ in range(3):
+        step()
+    torch.cuda.synchronize()
+    return {'batch_size': batch, 'images_per_second': 3 * batch / (time.perf_counter() - t0),
+            'peak_allocated_bytes': torch.cuda.max_memory_allocated(), 'passed': True}
+
+
+def check_gpu_pipeline(trainset, common, device):
     import tempfile
-    checks = []
-    for batch in [256, 128, 64]:
-        seed_all(common['seed'])
+    import torchvision.transforms.functional as tf
+    # Compare the same explicit flip/crop decisions against the course PIL operations.
+    x = trainset.images[:4]
+    flips = torch.tensor([False, True, False, True], device=device).reshape(4,1,1,1)
+    ys = torch.tensor([0,8,4,2], device=device)
+    xs = torch.tensor([8,0,4,6], device=device)
+    actual = augment_uint8(x, flips, ys, xs).cpu()
+    expected = []
+    for i in range(4):
+        pil = tf.to_pil_image(x[i].cpu())
+        if flips[i].item():
+            pil = tf.hflip(pil)
+        pil = tf.crop(tf.pad(pil, 4), ys[i].item(), xs[i].item(), 32, 32)
+        expected.append(tf.pil_to_tensor(pil))
+    assert torch.equal(actual, torch.stack(expected))
+    # Verify epoch data order and augmentations restart exactly.
+    a = next(trainset.batches(32, common['seed'] + 2, True))
+    b = next(trainset.batches(32, common['seed'] + 2, True))
+    assert all(torch.equal(u, v) for u,v in zip(a,b))
+    seed_all(common['seed'])
+    model = model_new(device)
+    optimizer = optimizer_new(model, {'optimizer':'adam', 'lr':.001})
+    x,y = a
+    def step():
+        model.train()
+        optimizer.zero_grad(set_to_none=True)
+        loss = nn.functional.cross_entropy(model(x), y)
+        loss.backward()
+        optimizer.step()
+        return {k:v.detach().clone() for k,v in model.state_dict().items()}
+    before = next(model.parameters()).detach().clone()
+    step()
+    assert not torch.equal(before, next(model.parameters()))
+    with tempfile.TemporaryDirectory(prefix='exp4-check-') as temp:
+        path = Path(temp)/'resume.pt'
+        save_checkpoint(path,model,optimizer,1,[],-1.)
+        expected_state = step()
+        load_checkpoint(path,model,optimizer)
+        resumed_state = step()
+        assert all(torch.equal(expected_state[k], resumed_state[k]) for k in expected_state)
+    assert [round(lr_at({'lr':.1,'milestones':[30,40]},e),8) for e in [1,30,31,40,41,50]] == [.1,.1,.01,.01,.001,.001]
+    return {'augmentation_matches_pil': True, 'epoch_data_restart_exact': True,
+            'optimizer_resume_exact': True, 'parameter_update': True, 'lr_boundaries': True}
+
+
+def preflight(common, trainset, out, device):
+    import gc
+    checks = check_gpu_pipeline(trainset, common, device)
+    gc.collect()
+    torch.cuda.empty_cache()
+    free, total = torch.cuda.mem_get_info()
+    # Include resident data, leave 384 MiB for the display and allocation fluctuations.
+    budget = torch.cuda.memory_allocated() + free - 384 * 1024**2
+    candidates = []
+    for batch in [256,512,1024,1536,2048,3072,4096]:
         try:
-            model = model_new(device)
-            optimizer = optimizer_new(model, {'optimizer': 'adam', 'lr': .001})
-            dl = loader_new(Subset(trainset, list(range(batch * 3))), batch, common['workers'], common['seed'], True)
-            torch.cuda.reset_peak_memory_stats()
-            start = time.perf_counter()
-            before = next(model.parameters()).detach().clone()
-            for x, y in dl:
-                optimizer.zero_grad(set_to_none=True)
-                z = model(x.to(device))
-                assert z.shape == (batch, 100)
-                nn.functional.cross_entropy(z, y.to(device)).backward()
-                optimizer.step()
-            torch.cuda.synchronize()
-            assert not torch.equal(before, next(model.parameters()))
-            with tempfile.TemporaryDirectory(prefix='exp4-check-') as temp:
-                path = Path(temp) / 'resume.pt'
-                save_checkpoint(path, model, optimizer, 1, [], -1.)
-                model.eval()
-                x = x.to(device)
-                with torch.no_grad():
-                    expected = model(x).clone()
-                load_checkpoint(path, model, optimizer)
-                with torch.no_grad():
-                    assert torch.equal(expected, model(x))
-                def next_step():
-                    model.train()
-                    optimizer.zero_grad(set_to_none=True)
-                    loss = nn.functional.cross_entropy(model(x), y.to(device))
-                    loss.backward()
-                    optimizer.step()
-                    return {k:v.detach().clone() for k,v in model.state_dict().items()}
-                expected_state = next_step()
-                load_checkpoint(path, model, optimizer)
-                resumed_state = next_step()
-                assert all(torch.equal(expected_state[k], resumed_state[k]) for k in expected_state)
-            checks.append({'batch_size': batch, 'seconds_three_batches_with_checkpoint': time.perf_counter()-start,
-                           'peak_allocated_bytes': torch.cuda.max_memory_allocated(), 'passed': True})
-            common['batch_size'] = batch
-            break
+            row = probe_batch(trainset,batch,common['seed'],device)
+            row['within_budget'] = row['peak_allocated_bytes'] <= budget
+            candidates.append(row)
+            print(json.dumps({'capacity_probe':row}),flush=True)
         except torch.cuda.OutOfMemoryError:
-            checks.append({'batch_size': batch, 'passed': False, 'reason': 'CUDA OOM'})
-            del model, optimizer
-            torch.cuda.empty_cache()
-    else:
-        raise RuntimeError('No approved batch size fits')
-    write_json(out / 'preflight.json', checks)
+            candidates.append({'batch_size':batch,'passed':False,'reason':'CUDA OOM'})
+        gc.collect()
+        torch.cuda.empty_cache()
+        if not candidates[-1]['passed']:
+            break
+    valid = [r for r in candidates if r['passed'] and r['within_budget']]
+    if not valid:
+        raise RuntimeError('No batch size fits the GPU memory budget')
+    fastest = max(r['images_per_second'] for r in valid)
+    # Prefer fuller useful batches when measured throughput is within 5% of the fastest.
+    selected = max((r for r in valid if r['images_per_second'] >= .95*fastest),key=lambda r:r['batch_size'])
+    common.update(batch_size=selected['batch_size'],workers=0,data_pipeline='cuda_resident_uint8')
+    write_json(out/'preflight.json',{'checks':checks,'candidates':candidates,'selected':selected,
+                                   'memory_budget_bytes':budget,'device_total_bytes':total})
     return common
 
 
@@ -263,13 +348,14 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     config = json.loads(args.config.read_text(encoding='utf-8'))
     common = dict(config['common'])
-    train_tf = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.RandomCrop(32, padding=4), transforms.ToTensor(), transforms.Normalize((.5,)*3,(.5,)*3)])
-    eval_tf = transforms.Compose([transforms.ToTensor(), transforms.Normalize((.5,)*3,(.5,)*3)])
-    trainset = torchvision.datasets.CIFAR100(str(args.data), train=True, transform=train_tf)
-    testset = torchvision.datasets.CIFAR100(str(args.data), train=False, transform=eval_tf)
-    assert len(trainset) == 50000 and len(testset) == 10000
-    assert np.bincount(trainset.targets, minlength=100).tolist() == [500] * 100
-    assert np.bincount(testset.targets, minlength=100).tolist() == [100] * 100
+    train_raw = torchvision.datasets.CIFAR100(str(args.data), train=True)
+    test_raw = torchvision.datasets.CIFAR100(str(args.data), train=False)
+    assert len(train_raw) == 50000 and len(test_raw) == 10000
+    assert np.bincount(train_raw.targets, minlength=100).tolist() == [500] * 100
+    assert np.bincount(test_raw.targets, minlength=100).tolist() == [100] * 100
+    trainset = DeviceCIFAR(train_raw, device, True)
+    testset = DeviceCIFAR(test_raw, device, False)
+    del train_raw, test_raw
     if not (args.output / 'protocol.json').exists():
         common = preflight(common, trainset, args.output, device)
         version = subprocess.check_output(['git','rev-parse','HEAD'], cwd=BASE, text=True).strip()
@@ -292,6 +378,9 @@ def main():
         try:
             run_one(run, common, trainset, testset, args.output, device)
             completed.append(run['id'])
+        except PauseRequested:
+            write_json(args.output/'status.json', {'state':'paused','run':run['id'],'completed_runs':completed})
+            return 75
         except FloatingPointError:
             failed.append(run['id'])
     write_json(args.output/'status.json', {'state': 'incomplete' if failed else 'complete',
@@ -302,4 +391,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    sys.exit(main())

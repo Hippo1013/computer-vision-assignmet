@@ -15,6 +15,8 @@ def main():
     state='runner_failed'
     with open(out/'runner.log','ab',buffering=0) as log, open(out/'runner-error.log','ab',buffering=0) as error:
         code=subprocess.call([sys.executable,'-u',str(base/'train_stage1.py')],cwd=base.parent,stdout=log,stderr=error)
+        if code==75:
+            state='paused'
         if code==0:
             code=subprocess.call([sys.executable,str(base/'summarize_stage1.py'),str(out)],cwd=base.parent,stdout=log,stderr=error)
             state='complete' if code==0 else 'summary_failed'
