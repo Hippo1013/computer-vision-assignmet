@@ -1,0 +1,43 @@
+\Needspace{130bp}
+\section{交通标志图像分类与参数影响}
+
+\subsection{分类结果与特征维度}
+将数据集更换为10类交通标志，使用6,024张训练图像和324张测试图像。
+图像保持 $224\times224$ 原尺寸，灰度化后提取HOG特征，使用线性SVM分类，固定 $C=1$。
+已尝试配置中，方向数9、Cell大小 $4\times4$ 像素、Block大小 $4\times4$ 个Cell的结果最好，
+测试准确率为95.06\%（308/324），比原始参数提高1.54个百分点，测试正确数增加5张。
+此时图像包含 $56\times56$ 个Cell，可放置 $53\times53$ 个Block，特征维度为
+$D=53\times53\times4\times4\times9=404\,496$。
+
+\ReportTableCaption{交通标志分类结果比较\label{tab:traffic-classification}}
+\input{traffic-classification-table.tex}
+HOG参数顺序与表\ref{tab:cifar-classification}相同；各组训练准确率均为100\%。
+测试集参与了HOG参数比较，结果限于本次候选配置及该数据划分。
+
+\subsection{HOG参数影响分析}
+\textbf{Cell与Block大小。}固定方向数9、Block为 $2\times2$ 时，
+Cell边长4像素的测试准确率为94.14\%，高于8和16像素的93.52\%，相差2张图像。
+在Cell为 $4\times4$ 时，将Block由 $2\times2$ 增大至 $4\times4$，准确率进一步提高到95.06\%。
+较小Cell与较大Block的配合在本次比较中较好，但特征维度也明显增加。
+
+\textbf{方向数。}固定Cell为 $4\times4$、Block为 $4\times4$ 时，方向数从6增加到9，
+准确率由93.52\%提高到95.06\%；继续增加到12反而降至94.14\%。
+这说明方向划分更细并不一定带来更好的分类效果，本次三组中9个方向较合适。
+
+\subsection{分类样本对比}
+\begin{minipage}{\linewidth}
+  \begin{minipage}[c]{0.49\linewidth}
+    \begin{minipage}[c]{72bp}\includegraphics[width=\linewidth]{traffic-correct.png}\end{minipage}\hfill
+    \begin{minipage}[c]{0.67\linewidth}
+      \textbf{分类正确}\\真实类别：警告标志\\模型预测：警告标志
+    \end{minipage}
+  \end{minipage}\hfill
+  \begin{minipage}[c]{0.49\linewidth}
+    \begin{minipage}[c]{72bp}\includegraphics[width=\linewidth]{traffic-incorrect.png}\end{minipage}\hfill
+    \begin{minipage}[c]{0.67\linewidth}
+      \textbf{分类错误}\\真实类别：警告标志\\模型预测：人行横道标志
+    \end{minipage}
+  \end{minipage}
+  \captionof{figure}{交通标志测试样本及中文预测类别，使用HOG 9/4/4、$C=1$ 的模型。}
+  \label{fig:traffic-examples}
+\end{minipage}

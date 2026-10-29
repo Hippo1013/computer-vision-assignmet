@@ -1,0 +1,56 @@
+\Needspace{155bp}
+\textbf{（1）边缘与梯度方向。}梯度表示亮度变化的方向和强弱。图\ref{fig:hog-edge}中，
+竖直分界两侧的亮度沿水平方向变化；水平分界两侧则沿垂直方向变化。
+因此，梯度方向与边缘的走向垂直。
+
+\begin{minipage}{\linewidth}
+\centering
+\begin{minipage}{.38\linewidth}
+\centering
+\includegraphics[height=83bp]{shared-hog/edge-vertical.png}\\[-2bp]
+{\fontsize{9bp}{12bp}\selectfont 竖直边缘：水平方向的梯度}
+\end{minipage}\hspace{20bp}
+\begin{minipage}{.38\linewidth}
+\centering
+\includegraphics[height=83bp]{shared-hog/edge-horizontal.png}\\[-2bp]
+{\fontsize{9bp}{12bp}\selectfont 水平边缘：垂直方向的梯度}
+\end{minipage}
+\captionof{figure}{边缘与梯度方向。红箭头示意梯度方向所在的轴，HOG不区分相差 $180^\circ$ 的方向。}
+\label{fig:hog-edge}
+\end{minipage}
+
+\Needspace{155bp}
+\textbf{（2）Cell内的方向统计。}将图像分成 $8\times8$ 像素的小单元（Cell），
+把 $0^\circ$ 至 $180^\circ$ 的方向分成9类，每类跨度为 $20^\circ$。
+每个像素按梯度方向投票，梯度幅值越大，贡献越大；一个Cell最终得到9个方向统计值。
+
+\begin{minipage}{\linewidth}
+\centering
+\begin{minipage}{.37\linewidth}
+\centering
+\includegraphics[height=100bp]{shared-hog/cell-directions.png}\\[-2bp]
+{\fontsize{9bp}{12bp}\selectfont $8\times8$像素内的方向分布}
+\end{minipage}
+{\color{ReportTeal}\Large $\longrightarrow$}
+\begin{minipage}{.37\linewidth}
+\centering
+\includegraphics[height=100bp]{shared-hog/cell-histogram.png}\\[-2bp]
+{\fontsize{9bp}{12bp}\selectfont 9个方向区间的统计值}
+\end{minipage}
+\captionof{figure}{Cell内的梯度方向与方向直方图示意。}
+\label{fig:hog-cell}
+\end{minipage}
+
+\Needspace{175bp}
+\textbf{（3）Block归一化与特征拼接。}把相邻Cell组成块（Block），先拼接各Cell的9个数。
+图\ref{fig:hog-block}用 $2\times2$ 个Cell举例，所以每块为36维。
+为减小对比度变化的影响，再对整块数值进行L2-Hys归一化：先调整整体大小，
+限制过大的值，再归一化一次。随后将Block每次移动一个Cell，把所有块的结果依次拼接。
+
+\begin{minipage}{\linewidth}
+\centering
+\includegraphics[height=106bp]{shared-hog/block-cells.png}
+\captionof{figure}{Cell到Block的组合示例。此图使用 $2\times2$ 个Cell说明原理；本题指定 $16\times16$ 个Cell，每块为2,304维。}
+\label{fig:hog-block}
+\end{minipage}
+

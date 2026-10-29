@@ -1,0 +1,75 @@
+\section{HOG特征可视化与参数分析}
+
+\subsection{实验设置}
+使用同一张 $432\times768$ 灰度图，比较HOG的方向数、Cell大小和Block大小。
+Cell是统计局部梯度方向的小区域，Block由相邻Cell组成，用于归一化。
+以方向数9、Cell大小 $8\times8$ 像素、Block大小 $2\times2$ 个Cell为对照，
+每次只改变一个参数，共7组。各组均采用L2-Hys归一化，可视化的亮度范围相同。
+
+\Needspace{75bp}
+\subsection{方向数对比}
+固定Cell大小 $8\times8$ 像素和Block大小 $2\times2$ 个Cell，比较方向数4、9、18。
+图\ref{fig:hog-orientation-comparison}中，三组都能呈现人物与建筑的主要轮廓。
+方向数增加后，每个方向区间由 $45^\circ$ 缩小至 $10^\circ$，局部线段的方向组合更细，
+整体轮廓变化较小。
+
+\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{hog-orientation-comparison.png}
+  \captionof{figure}{方向数对比。上排为HOG全图，下排为橙框区域的梯度方向统计可视化。Cell为 $8\times8$ 像素，Block为 $2\times2$ 个Cell。}
+  \label{fig:hog-orientation-comparison}
+\end{minipage}
+
+\subsection{Cell大小对比}
+固定方向数9和Block大小 $2\times2$ 个Cell，比较Cell边长4、8、16像素。
+图\ref{fig:hog-cell-comparison}中，小Cell的网格更密，能分别记录较小区域的方向变化；
+大Cell将更大范围内的梯度合并，面部与头发附近的细小结构较难区分。
+青框选取同一位置所在的Cell，覆盖面积随Cell大小变化。
+4像素和16像素Cell的直方图峰值分别位于 $160^\circ$--$180^\circ$ 和 $20^\circ$--$40^\circ$，
+说明统计区域扩大后，包含的主要梯度方向也发生了变化。
+
+\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{hog-cell-comparison.png}
+  \captionof{figure}{Cell大小对比。上排为HOG全图，中排为橙框区域的局部放大，青框标出目标Cell；下排为该Cell归一化前的方向直方图。方向数为9，Block为 $2\times2$ 个Cell。}
+  \label{fig:hog-cell-comparison}
+\end{minipage}
+
+\subsection{Block大小对比}
+固定方向数9和Cell大小 $8\times8$ 像素，比较Block大小 $1\times1$、$2\times2$、$4\times4$ 个Cell。
+选择图\ref{fig:hog-cell-comparison}中间一列青框标出的Cell，将它作为各Block的左上角，
+比较整块归一化后该Cell的9个方向值。
+
+\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{hog-block-cell-histograms.png}
+  \captionof{figure}{不同Block大小下同一Cell归一化后的方向直方图，横纵坐标范围相同。归一化针对整个Block进行。}
+  \label{fig:hog-block-cell-histograms}
+\end{minipage}
+
+\Needspace{55bp}
+图\ref{fig:hog-block-cell-histograms}中，Block增大后，目标Cell的柱高整体降低。
+$1\times1$ 时多个方向的柱高接近，$2\times2$ 与 $4\times4$ 时主峰更突出。
+这是因为归一化时同时考虑了周围Cell，同一个Cell的最终数值会随Block范围改变。
+三组原始方向统计和HOG可视化相同，说明可视化图不能反映Block归一化后的全部变化。
+
+\subsection{参数变化与特征维度}
+表\ref{tab:hog-parameter-dimensions}中的特征维度是最终向量包含的数值个数。
+方向数增加时，每个Cell记录的数值增多，总维度成比例增加；
+Cell增大时，图像中的Cell和Block数量减少，总维度明显下降。
+
+\ReportTableCaption{不同HOG参数下的实测特征维度\label{tab:hog-parameter-dimensions}}
+\begin{ReportTable}{C C C C}
+\rowcolor{ReportNavy}
+\ReportHead{方向数} & \ReportHead{Cell大小（像素）} & \ReportHead{Block大小（Cell）} & \ReportHead{特征维度}\\
+4 & $8\times8$ & $2\times2$ & 80,560\\
+9 & $8\times8$ & $2\times2$ & 181,260\\
+18 & $8\times8$ & $2\times2$ & 362,520\\
+9 & $4\times4$ & $2\times2$ & 735,732\\
+9 & $16\times16$ & $2\times2$ & 43,992\\
+9 & $8\times8$ & $1\times1$ & 46,656\\
+9 & $8\times8$ & $4\times4$ & 682,992\\
+\end{ReportTable}
+
+Block增大时，虽然可放置的Block数量减少，但每个Block包含更多Cell，本次三组的总维度仍依次增加。
+因此，三个参数分别影响方向划分、空间统计范围和局部归一化，维度更高并不直接代表分类效果更好。

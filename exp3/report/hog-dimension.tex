@@ -1,0 +1,34 @@
+\section{HOG算法流程与特征维度}
+
+\subsection{算法流程}
+图像灰度化后，计算各像素的梯度方向与幅值，梯度方向垂直于边缘。
+将图像划分为Cell，在 $0^\circ$ 至 $180^\circ$ 内按方向分组，以梯度幅值作为权重统计直方图；
+9个方向对应每组 $20^\circ$。随后将相邻Cell组成Block，拼接各Cell的方向值并进行L2-Hys归一化，
+即归一化、限制过大值、再次归一化。Block每次移动一个Cell，最后拼接所有Block的特征。
+
+\subsection{特征维度推导}
+题目图像为 $432\times768$（高$\times$宽），方向数9，Cell为 $8\times8$ 像素，
+Block为 $16\times16$ 个Cell，即覆盖 $128\times128$ 像素。
+纵、横向Cell数分别为 $432/8=54$、$768/8=96$；Block按一个Cell的步长滑动，数量为
+\[
+  N_{\text{块}}=(54-16+1)(96-16+1)=39\times81=3\,159.
+\]
+每个Block含 $16\times16\times9=2\,304$ 个方向值，拼接后的总维度为
+\[
+  \boxed{D=39\times81\times16\times16\times9=7\,278\,336.}
+\]
+相邻Block重叠，同一Cell在不同Block中的归一化结果均保留，因此拼接时不去重。
+
+\Needspace{125bp}
+\subsection{实验验证与结果分析}
+对同一灰度图提取保留Block结构的数组和一维特征，实测形状与长度均与推导一致，
+两种返回形式展开后逐项相同（表\ref{tab:hog-dimension-verification}）。
+
+\ReportTableCaption{HOG特征维度的推导与实测对照\label{tab:hog-dimension-verification}}
+\begin{ReportTable}{L C C}
+\rowcolor{ReportNavy}
+\ReportHead{核对项目} & \ReportHead{推导结果} & \ReportHead{实测结果}\\
+块结构形状 & $39\times81\times16\times16\times9$ & $39\times81\times16\times16\times9$\\
+一维特征长度 & 7,278,336 & 7,278,336\\
+\end{ReportTable}
+

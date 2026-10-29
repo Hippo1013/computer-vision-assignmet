@@ -1,0 +1,54 @@
+\section{CIFAR-10图像分类与参数影响}
+
+\subsection{分类结果与特征维度}
+将CIFAR-10的 $32\times32$ 图像灰度化，提取HOG特征后使用线性SVM分类。
+经过尝试不同参数组合，得到的最佳配置为：方向数9、Cell大小 $4\times4$ 像素、
+Block大小 $4\times4$ 个Cell，SVM参数 $C=0.2$。
+其中，$C$ 是SVM的误差惩罚系数：值越大，越重视减小训练误差；值越小，对模型复杂度的限制越强。
+使用50,000张训练图像训练后，在10,000张测试图像上的准确率为56.35\%，
+较原始参数提高5.00个百分点，达到50\%以上的任务要求。
+此时图像包含 $8\times8$ 个Cell，可放置 $5\times5$ 个Block，特征维度为
+$D=5\times5\times4\times4\times9=3\,600$。
+
+\ReportTableCaption{CIFAR-10分类结果比较\label{tab:cifar-classification}}
+\input{cifar-classification-table.tex}
+\Needspace{30bp}
+表中HOG参数依次为方向数、Cell边长（像素）、Block边长（Cell）。
+测试集参与了SVM参数比较，表中准确率为该测试集上的结果。
+
+\subsection{HOG参数影响分析}
+图\ref{fig:cifar-hog-effects}比较其余设置相同时的参数影响，各组SVM均固定 $C=1$。
+
+\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{cifar-hog-effects.png}
+  \captionof{figure}{HOG参数对验证准确率的影响。各组均使用相同的40,000张训练图像和10,000张验证图像。左：Cell为 $8\times8$、Block为 $2\times2$；中：方向数9、Block为 $2\times2$；右：方向数9，不同曲线对应不同Cell大小。}
+  \label{fig:cifar-hog-effects}
+\end{minipage}
+
+\textbf{方向数。}固定Cell与Block后，方向数由4增加到18，验证准确率由44.82\%提高到52.68\%，
+说明更细的方向划分有助于分类；继续增加后，准确率在约52\%附近波动，收益趋于平缓。
+
+\textbf{Cell与Block大小。}固定Block为 $2\times2$ 时，Cell边长4至6像素的结果接近，
+增大到16像素后准确率降至39.53\%，说明对 $32\times32$ 小图像，过大的Cell不利于保留空间细节。
+但Block也并非越大越好：Cell边长为8、6、4像素时，已比较结果中较优的Block边长分别为2、3、4个Cell，
+实际覆盖范围分别为 $16\times16$、$18\times18$、$16\times16$ 像素。
+可见Cell与Block需要配合：较小的Cell保留细节，同时用包含更多Cell的Block进行较大范围的归一化。
+
+\subsection{分类样本对比}
+\begin{minipage}{\linewidth}
+  \begin{minipage}[c]{0.49\linewidth}
+    \begin{minipage}[c]{72bp}\includegraphics[width=\linewidth]{cifar-correct.png}\end{minipage}\hfill
+    \begin{minipage}[c]{0.67\linewidth}
+      \textbf{分类正确}\\真实类别：船\\模型预测：船
+    \end{minipage}
+  \end{minipage}\hfill
+  \begin{minipage}[c]{0.49\linewidth}
+    \begin{minipage}[c]{72bp}\includegraphics[width=\linewidth]{cifar-incorrect.png}\end{minipage}\hfill
+    \begin{minipage}[c]{0.67\linewidth}
+      \textbf{分类错误}\\真实类别：猫\\模型预测：狗
+    \end{minipage}
+  \end{minipage}
+  \captionof{figure}{CIFAR-10测试样本及中文预测类别，使用HOG 9/4/4、$C=0.2$ 的模型。}
+  \label{fig:cifar-examples}
+\end{minipage}

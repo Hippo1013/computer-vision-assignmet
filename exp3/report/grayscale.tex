@@ -1,0 +1,21 @@
+\section{图像灰度化与灰度直方图}
+
+\subsection{实验过程}
+选用指定图像 \texttt{jinx.jpg}，尺寸为 $432\times768$（高$\times$宽）。
+利用OpenCV将彩色图像转为灰度图，保持原始尺寸，随后统计0至255各灰度级的像素数，
+绘制整幅图像的灰度直方图。
+
+\begin{minipage}{\linewidth}
+  \centering
+  \includegraphics[width=.485\linewidth]{jinx.jpg}\hfill
+  \includegraphics[width=.485\linewidth]{jinx_gray.png}
+  \captionof{figure}{指定彩色图像（左）与灰度图（右）。}
+\end{minipage}
+
+\subsection{实验结果与分析}
+\ReportFigure[128bp]{histogram.png}{整幅图像的灰度直方图，横轴为灰度级，纵轴为像素数。}
+
+灰度图中人物、武器与背景建筑的轮廓仍然可辨，头发与灯光的颜色则转化为不同的亮度。
+直方图主要集中在低灰度区域，平均灰度为55.31，出现次数最多的灰度级为49，
+低于128的像素占99.37\%，与画面整体较暗的观察一致。
+右侧少量高灰度像素对应灯光和局部高光。灰度化保留了主要轮廓与明暗关系，但原有色彩差异不再直接可见。
