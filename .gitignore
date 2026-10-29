@@ -13,6 +13,9 @@ __pycache__/
 /exp1/Depth-Anything-V2/nyu_data/*
 !/exp1/Depth-Anything-V2/nyu_data/README.txt
 /exp2/data/
+/exp3/cv_homework1/cifar-10-batches-py/
+/exp3/cv_homework1/Traffic_sign/
+/exp3/cv_homework1/data/features/
 *.pth
 *.pt
 *.ckpt
@@ -70,3 +73,9 @@ events.out.tfevents.*
 # Final report PDFs are maintained with their editable sources
 !/exp1/report/report.pdf
 !/exp2/report/report.pdf
+
+# Exp4 dataset and named final reports
+/exp4/cv_homework2/data/
+!/exp1/report/实验一.pdf
+!/exp2/report/实验2-立体匹配与三维重建.pdf
+!/exp3/report/实验3-基于传统视觉的图像分类.pdf

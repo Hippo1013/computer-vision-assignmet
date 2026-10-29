@@ -6,9 +6,13 @@
 
 - `exp1/Depth-Anything-V2/`：Depth Anything V2 源码与本地实验脚本；入口见 `exp1/实验指令汇总.md`。
 - `exp2/`：MVSNet 多视图深度、点云融合、参数对比脚本与青蓝报告源码；入口见 `exp2/实验指令汇总.md`。
-- 后续实验可按 `exp3/` 等目录继续添加。
+- `exp3/`：HOG 特征与 SVM 图像分类、CIFAR-10 HOG 参数搜索和固定 HOG 的 SVM 参数调优；入口见 `exp3/实验指令汇总.md`，代码与环境说明见 `exp3/cv_homework1/README.md`。
+
+- `exp4/`：ResNet10 的 CIFAR-100 优化器与学习率对照，训练在 Windows GPU 上执行；入口见 `exp4/README.md`。
 
 ## 小组协作
+
+报告撰写与修改遵循 [实验报告书写规范自检](实验报告书写规范自检.md)，每次完成后按文档逐项检查。具体实验的完成状态与自检结果见对应报告目录的README。
 
 ```bash
 git clone https://github.com/Hippo1013/computer-vision-assignmet.git
@@ -26,7 +30,7 @@ git push -u origin exp1/your-name
 
 ## 文件与来源
 
-远端只维护源码、必要配置、许可证和说明，包括手写的 `.tex`、`.sty` 报告源码及两份最终 `report/report.pdf`。模型权重、输入数据、课程课件、预测结果、点云、日志、生成图表与表格均由 Git 忽略；最终报告 PDF 作为交付文件保留。已有本地文件仍在原路径，取消跟踪不会删除它们。
+远端只维护源码、必要配置、许可证和说明，包括手写的 `.tex`、`.sty` 报告源码及各实验 `report/` 下的最终中文命名 PDF。模型权重、输入数据、课程课件、预测结果、点云、日志、生成图表与表格均由 Git 忽略；最终报告 PDF 作为交付文件保留。已有本地文件仍在原路径，取消跟踪不会删除它们。
 
 仓库历史也已清除图片、点云等本地实验产物，保留最终报告 PDF。历史重写前的旧克隆请重新克隆，避免将旧历史重新推回远端。
 
