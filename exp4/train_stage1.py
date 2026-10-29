@@ -3,8 +3,6 @@ import argparse
 import hashlib
 import importlib.util
 import json
-import math
-import os
 import platform
 import random
 import subprocess
@@ -221,6 +219,17 @@ def preflight(common, trainset, valset, out, device):
                 load_checkpoint(path, model, optimizer)
                 with torch.no_grad():
                     assert torch.equal(expected, model(x))
+                def next_step():
+                    model.train()
+                    optimizer.zero_grad(set_to_none=True)
+                    loss = nn.functional.cross_entropy(model(x), y.to(device))
+                    loss.backward()
+                    optimizer.step()
+                    return {k:v.detach().clone() for k,v in model.state_dict().items()}
+                expected_state = next_step()
+                load_checkpoint(path, model, optimizer)
+                resumed_state = next_step()
+                assert all(torch.equal(expected_state[k], resumed_state[k]) for k in expected_state)
             checks.append({'batch_size': batch, 'seconds_three_batches_with_checkpoint': time.perf_counter()-start,
                            'peak_allocated_bytes': torch.cuda.max_memory_allocated(), 'passed': True})
             common['batch_size'] = batch
@@ -250,6 +259,18 @@ def main():
     torch.backends.cudnn.allow_tf32 = False
     device = torch.device('cuda:0')
     args.output.mkdir(parents=True, exist_ok=True)
+    # Keep a process-wide exclusive lock; Windows scheduled tasks may be restarted manually.
+    lock = open(args.output / 'run.lock', 'a+b')
+    if platform.system() == 'Windows':
+        import msvcrt
+        if lock.tell() == 0:
+            lock.write(b'0')
+            lock.flush()
+        lock.seek(0)
+        msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     config = json.loads(args.config.read_text(encoding='utf-8'))
     common = dict(config['common'])
     train_tf = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.RandomCrop(32, padding=4), transforms.ToTensor(), transforms.Normalize((.5,)*3,(.5,)*3)])
@@ -282,6 +303,8 @@ def main():
         except FloatingPointError:
             continue
     # Selection freezes before the first access to test data. Ties follow declared run order.
+    if not histories:
+        raise RuntimeError('All runs failed; no final configuration can be selected')
     selected = max(histories, key=lambda k: max(r['validation']['accuracy'] for r in histories[k]))
     selection = {'selected_run':selected, 'criterion':'maximum validation accuracy; earliest epoch and declared run order break ties',
                  'runs':{k:{'best_epoch':max(v,key=lambda r:r['validation']['accuracy'])['epoch'],
