@@ -37,7 +37,7 @@ def main():
     lines.extend(['','本表按验证集最佳轮次报告对照组测试结果；全训练集重训采用末轮结果。训练耗时包含训练数据加载、前后向与参数更新，不含验证、检查点写盘及首次环境准备。仅一个随机种子，结果限于本次参数范围。'])
     (root/'阶段结果.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
     groups={'sgd_learning_rates':['sgd_lr0001','sgd_lr001','sgd_lr01'],
-            'adam_learning_rates':['adam_lr00001','adam_lr0001','adam_lr001'],
+            'optimizer_comparison':['sgd_lr0001','adam_lr0001'],
             'fixed_vs_step':['sgd_lr01','sgd_step']}
     for name,ids in groups.items():
         fig,axes=plt.subplots(1,3,figsize=(13,3.5),layout='constrained')
@@ -51,7 +51,8 @@ def main():
                 ax.set(xlabel='Epoch',ylabel=label)
                 ax.grid(alpha=.2)
         axes[2].set_yscale('log')
-        axes[0].legend(fontsize=7)
+        if axes[0].lines:
+            axes[0].legend(fontsize=7)
         fig.savefig(root/(name+'.png'),dpi=180)
         plt.close(fig)
     print('\n'.join(lines))

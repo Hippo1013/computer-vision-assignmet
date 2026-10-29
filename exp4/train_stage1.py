@@ -248,7 +248,7 @@ def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument('--config', type=Path, default=BASE / 'stage1.json')
     parser.add_argument('--data', type=Path, default=BASE / 'cv_homework2/data')
-    parser.add_argument('--output', type=Path, default=BASE / 'outputs/stage1_20261029')
+    parser.add_argument('--output', type=Path, default=BASE / 'outputs/stage1_20261029_five_runs')
     parser.add_argument('--preflight-only', action='store_true')
     args = parser.parse_args()
     assert torch.cuda.is_available(), 'CUDA required for approved timing comparison'
