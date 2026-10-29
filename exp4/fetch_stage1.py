@@ -10,7 +10,7 @@ from pathlib import Path
 def main():
     p=argparse.ArgumentParser(__doc__)
     p.add_argument('--weights',action='store_true',help='also transfer model checkpoints (large)')
-    p.add_argument('--run',choices=['stage1_20261029_train_test','adam_extra_lr_20261029'],default='stage1_20261029_train_test')
+    p.add_argument('--run',choices=['stage1_20261029_train_test','adam_extra_lr_20261029','stage45_20261029'],default='stage1_20261029_train_test')
     args=p.parse_args()
     remote = r'''
 import base64,io,zipfile
