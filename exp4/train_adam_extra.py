@@ -1,4 +1,4 @@
-"""Supplement fixed Adam learning rates, reusing the frozen stage-1 training implementation."""
+"""Supplement fixed and scheduled Adam learning rates, reusing the frozen stage-1 training implementation."""
 import argparse
 import json
 import platform
@@ -34,7 +34,8 @@ def main():
     config=json.loads((BASE/'adam_extra.json').read_text(encoding='utf-8'))
     common=base['common']
     assert common['batch_size']==1280 and common['epochs']==50
-    assert [(r['optimizer'],r['lr']) for r in config['runs']]==[('adam',.01),('adam',.1)]
+    assert [(r['optimizer'],r['lr']) for r in config['runs']]==[('adam',.01),('adam',.1),('adam',.001)]
+    assert config['runs'][-1]['milestones']==[30,40]
     torch.set_num_threads(4)
     torch.backends.cudnn.benchmark=False
     torch.backends.cudnn.deterministic=True

@@ -1,4 +1,4 @@
-"""Detached Windows entrypoint for the two supplementary Adam runs."""
+"""Detached Windows entrypoint for the three supplementary Adam runs."""
 import json
 import subprocess
 import sys

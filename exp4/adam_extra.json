@@ -1,6 +1,23 @@
 {
   "runs": [
-    {"id": "adam_lr001", "optimizer": "adam", "lr": 0.01},
-    {"id": "adam_lr01", "optimizer": "adam", "lr": 0.1}
+    {
+      "id": "adam_lr001",
+      "optimizer": "adam",
+      "lr": 0.01
+    },
+    {
+      "id": "adam_lr01",
+      "optimizer": "adam",
+      "lr": 0.1
+    },
+    {
+      "id": "adam_step",
+      "optimizer": "adam",
+      "lr": 0.001,
+      "milestones": [
+        30,
+        40
+      ]
+    }
   ]
 }
