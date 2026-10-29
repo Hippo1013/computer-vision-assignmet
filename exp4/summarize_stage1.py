@@ -38,6 +38,9 @@ def main():
     groups = {'optimizer_comparison': ['sgd_lr0001', 'adam_lr0001'],
               'sgd_learning_rates': ['sgd_lr0001', 'sgd_lr001', 'sgd_lr01'],
               'fixed_vs_step': ['sgd_lr01', 'sgd_step']}
+    labels = {'sgd_lr0001':'SGD, lr=0.001', 'adam_lr0001':'Adam, lr=0.001',
+              'sgd_lr001':'SGD, lr=0.01', 'sgd_lr01':'SGD, lr=0.1',
+              'sgd_step':'SGD, step 0.1 / 0.01 / 0.001'}
     for name, ids in groups.items():
         fig, axes = plt.subplots(1, 3, figsize=(13, 3.5), layout='constrained')
         for run in ids:
@@ -49,7 +52,8 @@ def main():
                                    (axes[1], 'test_accuracy', 'Test accuracy (%)'),
                                    (axes[2], 'lr', 'Learning rate')]:
                 values = [100*x['test']['accuracy'] if key == 'test_accuracy' else x[key] for x in h]
-                ax.plot([x['epoch'] for x in h], values, label=run)
+                ax.plot([x['epoch'] for x in h], values, label=labels[run],
+                        linestyle='--' if run=='adam_lr0001' else '-')
                 ax.set(xlabel='Epoch', ylabel=label)
                 ax.grid(alpha=.2)
         axes[2].set_yscale('log')
