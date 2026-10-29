@@ -14,7 +14,7 @@ def main():
     remote = r'''
 import base64,io,zipfile
 from pathlib import Path
-root=Path(r'E:\机器视觉\homework\exp4\outputs\stage1_20261029_five_runs')
+root=Path(r'E:\机器视觉\homework\exp4\outputs\stage1_20261029_train_test')
 buffer=io.BytesIO()
 with zipfile.ZipFile(buffer,'w',zipfile.ZIP_DEFLATED) as z:
     for f in root.rglob('*'):
@@ -27,7 +27,7 @@ print(base64.b64encode(buffer.getvalue()).decode('ascii'))
     cmd='powershell -NoProfile -EncodedCommand '+base64.b64encode(ps.encode('utf-16le')).decode()
     result=subprocess.run(['ssh','-o','BatchMode=yes','-o','ConnectTimeout=15','windows',cmd],capture_output=True,check=True)
     data=base64.b64decode(result.stdout.strip(),validate=True)
-    out=Path(__file__).resolve().parent/'outputs/stage1_20261029_five_runs'
+    out=Path(__file__).resolve().parent/'outputs/stage1_20261029_train_test'
     out.mkdir(parents=True,exist_ok=True)
     with zipfile.ZipFile(io.BytesIO(data)) as z:
         for name in z.namelist():

@@ -8,7 +8,7 @@ from pathlib import Path
 
 def main():
     base=Path(__file__).resolve().parent
-    out=base/'outputs/stage1_20261029_five_runs'
+    out=base/'outputs/stage1_20261029_train_test'
     out.mkdir(parents=True,exist_ok=True)
     (out/'environment.txt').write_bytes(subprocess.check_output([sys.executable,'-m','pip','freeze']))
     code=1

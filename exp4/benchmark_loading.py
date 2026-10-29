@@ -1,4 +1,4 @@
-"""Measure Windows loader startup and steady-state throughput, using training/validation only."""
+"""Measure Windows loader startup and steady-state throughput, using training images only."""
 import argparse
 import json
 import time
@@ -25,7 +25,7 @@ def main():
     data=training.BASE/'cv_homework2/data'
     train_all=torchvision.datasets.CIFAR100(str(data),train=True,transform=tf)
     val_all=torchvision.datasets.CIFAR100(str(data),train=True,transform=ef)
-    ids,vids=training.make_split(train_all.targets,20261029)
+    ids,vids=list(range(16384)),list(range(5000))
     train=Subset(train_all,ids[:16384]);val=Subset(val_all,vids)
     results=[]
     for workers in [0,2,4]:
@@ -52,7 +52,7 @@ def main():
                 loss.item();(z.argmax(1)==y).sum().item();total+=len(y)
             torch.cuda.synchronize();seconds=time.perf_counter()-start
             vstart=time.perf_counter();metrics=training.evaluate(model,vloader,device)[0];torch.cuda.synchronize()
-            row={'workers':workers,'persistent':workers>0,'pass':epoch,'training_samples':total,'train_seconds':seconds,'train_images_per_second':total/seconds,'validation_seconds':time.perf_counter()-vstart,'validation_samples':metrics['count']}
+            row={'workers':workers,'persistent':workers>0,'pass':epoch,'training_samples':total,'train_seconds':seconds,'train_images_per_second':total/seconds,'evaluation_seconds':time.perf_counter()-vstart,'evaluation_samples':metrics['count']}
             results.append(row);training.write_json(args.output,results);print(json.dumps(row),flush=True)
         del loader,vloader,model,optimizer
         torch.cuda.empty_cache()

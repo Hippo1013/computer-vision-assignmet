@@ -35,5 +35,6 @@
         40
       ]
     }
-  ]
+  ],
+  "data_protocol": "full_train_test_each_epoch"
 }

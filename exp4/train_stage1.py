@@ -54,20 +54,6 @@ def model_new(device):
     return module.resnet10(num_classes=100).to(device)
 
 
-def make_split(labels, seed):
-    rng = np.random.default_rng(seed)
-    train, val = [], []
-    labels = np.asarray(labels)
-    for c in range(100):
-        ids = np.flatnonzero(labels == c)
-        assert len(ids) == 500
-        ids = rng.permutation(ids)
-        val.extend(ids[:50].tolist())
-        train.extend(ids[50:].tolist())
-    assert len(train) == 45000 and len(val) == 5000 and not set(train) & set(val)
-    return sorted(train), sorted(val)
-
-
 def lr_at(config, epoch):
     return config['lr'] * (0.1 ** sum(epoch > m for m in config.get('milestones', [])))
 
@@ -124,10 +110,10 @@ def load_checkpoint(path, model, optimizer=None):
     return state
 
 
-def run_one(config, common, trainset, valset, out, device, full=False):
+def run_one(config, common, trainset, testset, out, device):
     folder = out / config['id']
     folder.mkdir(exist_ok=True)
-    effective = {**common, **config, 'full_training_set': full}
+    effective = {**common, **config, 'training_count': len(trainset), 'test_count': len(testset)}
     cp = folder / 'config.json'
     if cp.exists() and json.loads(cp.read_text(encoding='utf-8')) != effective:
         raise RuntimeError('Refusing to resume with changed configuration: ' + str(folder))
@@ -144,7 +130,7 @@ def run_one(config, common, trainset, valset, out, device, full=False):
         # Epoch-specific seeds make data augmentation and ordering restartable on Windows spawn.
         seed_all(common['seed'] + epoch)
         train_loader = loader_new(trainset, common['batch_size'], common['workers'], common['seed'] + epoch, True)
-        val_loader = None if full else loader_new(valset, common['batch_size'], common['workers'], common['seed'], False)
+        test_loader = loader_new(testset, common['batch_size'], common['workers'], common['seed'], False)
         lr = lr_at(config, epoch)
         for group in optimizer.param_groups:
             group['lr'] = lr
@@ -167,19 +153,23 @@ def run_one(config, common, trainset, valset, out, device, full=False):
             correct += (z.argmax(1) == y).sum().item()
         torch.cuda.synchronize()
         train_seconds = time.perf_counter() - t0
-        val = None if full else evaluate(model, val_loader, device)[0]
+        test, predictions, targets = evaluate(model, test_loader, device)
         torch.cuda.synchronize()
         row = dict(epoch=epoch, lr=lr, train_loss=loss_sum / total, train_accuracy=correct / total,
-                   validation=val, train_seconds=train_seconds, epoch_seconds=time.perf_counter() - t0)
+                   test=test, train_seconds=train_seconds, epoch_seconds=time.perf_counter() - t0)
         history.append(row)
-        improved = val is not None and val['accuracy'] > best
+        improved = test['accuracy'] > best
         if improved:
-            best = val['accuracy']
+            best = test['accuracy']
+        # Commit the selected checkpoint before last, so an interruption cannot leave
+        # last recording a new best that was never saved. Both writes are atomic.
+        if improved:
+            save_checkpoint(folder / 'best.pt', model, optimizer, epoch, history, best)
+            write_json(folder / 'best_test.json', {'epoch': epoch, 'metrics': test,
+                       'checkpoint': 'best.pt', 'predictions': predictions, 'targets': targets})
         save_checkpoint(last, model, optimizer, epoch, history, best)
-        if improved:
-            # Copy atomic last checkpoint: identical state for the selected epoch.
-            import shutil
-            shutil.copyfile(last, folder / 'best.pt')
+        write_json(folder / 'last_test.json', {'epoch': epoch, 'metrics': test,
+                   'checkpoint': 'last.pt', 'predictions': predictions, 'targets': targets})
         write_json(folder / 'history.json', history)
         print(json.dumps({'run': config['id'], **row}), flush=True)
         write_json(out / 'status.json', {'run': config['id'], 'epoch': epoch, 'epochs': common['epochs'], 'state': 'training'})
@@ -188,7 +178,7 @@ def run_one(config, common, trainset, valset, out, device, full=False):
     return state['history']
 
 
-def preflight(common, trainset, valset, out, device):
+def preflight(common, trainset, out, device):
     assert [lr_at({'lr': .1, 'milestones': [30, 40]}, e) for e in [1,30,31,40,41,50]] == [.1,.1,.010000000000000002,.010000000000000002,.0010000000000000002,.0010000000000000002]
     import tempfile
     checks = []
@@ -248,7 +238,7 @@ def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument('--config', type=Path, default=BASE / 'stage1.json')
     parser.add_argument('--data', type=Path, default=BASE / 'cv_homework2/data')
-    parser.add_argument('--output', type=Path, default=BASE / 'outputs/stage1_20261029_five_runs')
+    parser.add_argument('--output', type=Path, default=BASE / 'outputs/stage1_20261029_train_test')
     parser.add_argument('--preflight-only', action='store_true')
     args = parser.parse_args()
     assert torch.cuda.is_available(), 'CUDA required for approved timing comparison'
@@ -275,15 +265,16 @@ def main():
     common = dict(config['common'])
     train_tf = transforms.Compose([transforms.RandomHorizontalFlip(), transforms.RandomCrop(32, padding=4), transforms.ToTensor(), transforms.Normalize((.5,)*3,(.5,)*3)])
     eval_tf = transforms.Compose([transforms.ToTensor(), transforms.Normalize((.5,)*3,(.5,)*3)])
-    train_all = torchvision.datasets.CIFAR100(str(args.data), train=True, transform=train_tf)
-    val_all = torchvision.datasets.CIFAR100(str(args.data), train=True, transform=eval_tf)
-    train_ids, val_ids = make_split(train_all.targets, common['seed'])
-    write_json(args.output / 'split.json', {'seed': common['seed'], 'train_indices': train_ids, 'validation_indices': val_ids})
-    trainset, valset = Subset(train_all, train_ids), Subset(val_all, val_ids)
+    trainset = torchvision.datasets.CIFAR100(str(args.data), train=True, transform=train_tf)
+    testset = torchvision.datasets.CIFAR100(str(args.data), train=False, transform=eval_tf)
+    assert len(trainset) == 50000 and len(testset) == 10000
+    assert np.bincount(trainset.targets, minlength=100).tolist() == [500] * 100
+    assert np.bincount(testset.targets, minlength=100).tolist() == [100] * 100
     if not (args.output / 'protocol.json').exists():
-        common = preflight(common, trainset, valset, args.output, device)
+        common = preflight(common, trainset, args.output, device)
         version = subprocess.check_output(['git','rev-parse','HEAD'], cwd=BASE, text=True).strip()
         protocol = {'config': config, 'common': common, 'git_commit': version,
+                    'data_protocol': {'train': 'official full training split', 'training_count': 50000, 'test_count': 10000, 'validation_count': 0, 'evaluation': 'test after every epoch'},
                     'source_sha256': sha(__file__), 'model_sha256': sha(BASE / 'cv_homework2/resnet-cifar100.py'),
                     'environment': {'python':platform.python_version(), 'torch':torch.__version__, 'torchvision':torchvision.__version__, 'numpy':np.__version__, 'gpu':torch.cuda.get_device_name()},
                     'data_sha256': {p.name:sha(p) for p in sorted((args.data/'cifar-100-python').iterdir()) if p.is_file()}}
@@ -296,44 +287,17 @@ def main():
     if args.preflight_only:
         print(json.dumps({'preflight':'passed','common':common}), flush=True)
         return
-    histories = {}
+    completed, failed = [], []
     for run in config['runs']:
         try:
-            histories[run['id']] = run_one(run, common, trainset, valset, args.output, device)
+            run_one(run, common, trainset, testset, args.output, device)
+            completed.append(run['id'])
         except FloatingPointError:
-            continue
-    # Selection freezes before the first access to test data. Ties follow declared run order.
-    if not histories:
-        raise RuntimeError('All runs failed; no final configuration can be selected')
-    selected = max(histories, key=lambda k: max(r['validation']['accuracy'] for r in histories[k]))
-    selection = {'selected_run':selected, 'criterion':'maximum validation accuracy; earliest epoch and declared run order break ties',
-                 'runs':{k:{'best_epoch':max(v,key=lambda r:r['validation']['accuracy'])['epoch'],
-                            'best_validation_accuracy':max(r['validation']['accuracy'] for r in v),
-                            'train_seconds':sum(r['train_seconds'] for r in v), 'epoch_seconds':sum(r['epoch_seconds'] for r in v)} for k,v in histories.items()}}
-    freeze = args.output / 'selection_frozen.json'
-    if freeze.exists():
-        assert json.loads(freeze.read_text(encoding='utf-8')) == selection
-    else:
-        write_json(freeze, selection)
-    testset = torchvision.datasets.CIFAR100(str(args.data), train=False, transform=eval_tf)
-    testloader = loader_new(testset, common['batch_size'], common['workers'], common['seed'], False)
-    for name in histories:
-        target = args.output / name / 'test.json'
-        if not target.exists():
-            model = model_new(device)
-            load_checkpoint(args.output/name/'best.pt', model)
-            metrics, pred, true = evaluate(model,testloader,device)
-            write_json(target, {'metrics':metrics,'checkpoint':'best.pt','predictions':pred,'targets':true})
-    final = dict(next(r for r in config['runs'] if r['id']==selected))
-    final['id'] = 'final_full_train'
-    run_one(final, common, train_all, None, args.output, device, full=True)
-    target = args.output/'final_full_train/test.json'
-    if not target.exists():
-        model = model_new(device)
-        load_checkpoint(args.output/'final_full_train/last.pt', model)
-        metrics,pred,true = evaluate(model,testloader,device)
-        write_json(target, {'metrics':metrics,'checkpoint':'last.pt','selected_config':selected,'predictions':pred,'targets':true})
-    write_json(args.output/'status.json', {'state':'complete','selected_run':selected})
+            failed.append(run['id'])
+    write_json(args.output/'status.json', {'state': 'incomplete' if failed else 'complete',
+               'completed_runs': completed, 'failed_runs': failed})
+    if failed:
+        raise RuntimeError('Nonfinite loss in: ' + ', '.join(failed))
     print('STAGE1_COMPLETE', flush=True)
 
 
