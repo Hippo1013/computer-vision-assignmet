@@ -23,14 +23,15 @@ def main():
         peak=max(h,key=lambda r:r['test']['accuracy'])
         label=architecture+' '+optimizer
         rows.append({'id':name,'architecture':architecture,'optimizer':optimizer,'epochs':len(h),
+                     'parameters':{'resnet10':4949412,'resnet18':11220132,'resnet50':23705252}[architecture],
                      'effective_batch_size':1280,'micro_batch_size':micro,
                      'last_test_accuracy':h[-1]['test']['accuracy'],'peak_test_accuracy':peak['test']['accuracy'],
                      'peak_epoch':peak['epoch'],'train_minutes':sum(r['train_seconds'] for r in h)/60,
                      'train_test_minutes':sum(r['epoch_seconds'] for r in h)/60})
         histories[label]=h
     (root/'summary.json').write_text(json.dumps(rows,indent=2),encoding='utf-8')
-    lines=['# 第四步网络比较结果','','| 网络 | 优化器 | 已完成轮数 | 实际小批次 | 末轮测试准确率 | 最高测试准确率 | 训练分钟 |','|---|---|---:|---:|---:|---:|---:|']
-    for r in rows:lines.append(f"| {r['architecture']} | {r['optimizer']} | {r['epochs']} | {r['micro_batch_size']} | {100*r['last_test_accuracy']:.2f}% | {100*r['peak_test_accuracy']:.2f}% | {r['train_minutes']:.2f} |")
+    lines=['# 第四步网络比较结果','','| 网络 | 优化器 | 已完成轮数 | 参数量（百万） | 实际小批次 | 末轮测试准确率 | 最高测试准确率 | 训练分钟 |','|---|---|---:|---:|---:|---:|---:|---:|']
+    for r in rows:lines.append(f"| {r['architecture']} | {r['optimizer']} | {r['epochs']} | {r['parameters']/1e6:.3f} | {r['micro_batch_size']} | {100*r['last_test_accuracy']:.2f}% | {100*r['peak_test_accuracy']:.2f}% | {r['train_minutes']:.2f} |")
     lines.extend(['','各组有效批大小1280，50轮，完整50000训练/10000测试，FP32。ResNet10复用已有直接大批量结果；18/50使用小批梯度累积，BatchNorm统计不同，不能将差异完全归因于深度。训练分钟不含测试与检查点写盘。第五步尚未启动。'])
     (root/'第四步结果.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
     for optimizer in ['sgd','adam']:
