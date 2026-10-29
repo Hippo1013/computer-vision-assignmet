@@ -1,0 +1,12 @@
+{
+  "common": {"seed": 20261029, "epochs": 50, "batch_size": 256, "workers": 4},
+  "runs": [
+    {"id": "sgd_lr0001", "optimizer": "sgd", "lr": 0.001},
+    {"id": "sgd_lr001", "optimizer": "sgd", "lr": 0.01},
+    {"id": "sgd_lr01", "optimizer": "sgd", "lr": 0.1},
+    {"id": "adam_lr00001", "optimizer": "adam", "lr": 0.0001},
+    {"id": "adam_lr0001", "optimizer": "adam", "lr": 0.001},
+    {"id": "adam_lr001", "optimizer": "adam", "lr": 0.01},
+    {"id": "sgd_step", "optimizer": "sgd", "lr": 0.1, "milestones": [30, 40]}
+  ]
+}

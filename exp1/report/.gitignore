@@ -1,6 +1,6 @@
 # Keep the final report PDF; generated figures and tables stay local.
 *.pdf
-!report.pdf
+!实验一.pdf
 figures/
 *-table.tex
 *-rows.tex

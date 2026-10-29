@@ -1,0 +1,4 @@
+pytorch-ignite
+tqdm
+torchvision
+configargparse
