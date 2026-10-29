@@ -19,13 +19,13 @@ def main():
         h=json.loads(f.read_text(encoding='utf-8'))
         if not h:continue
         peak=max(h,key=lambda r:r['test']['accuracy'])
-        label=f'Adam, fixed lr={lr:g}' if name!='adam_step' else 'Adam, step 0.001 / 0.0001 / 0.00001'
-        rows.append({'id':name,'label':label,'lr':lr,'epochs':len(h),'last_test_accuracy':h[-1]['test']['accuracy'],
+        series_label=f'Adam, fixed lr={lr:g}' if name!='adam_step' else 'Adam, step 0.001 / 0.0001 / 0.00001'
+        rows.append({'id':name,'label':series_label,'lr':lr,'epochs':len(h),'last_test_accuracy':h[-1]['test']['accuracy'],
                      'peak_test_accuracy':peak['test']['accuracy'],'peak_epoch':peak['epoch'],
                      'train_minutes':sum(r['train_seconds'] for r in h)/60})
         for ax,key,label in [(axes[0],'train_loss','Training loss'),(axes[1],'test_accuracy','Test accuracy (%)'),(axes[2],'lr','Learning rate')]:
             values=[100*r['test']['accuracy'] if key=='test_accuracy' else r[key] for r in h]
-            ax.plot([r['epoch'] for r in h],values,label=label,linestyle='--' if name=='adam_step' else '-')
+            ax.plot([r['epoch'] for r in h],values,label=series_label,linestyle='--' if name=='adam_step' else '-')
             ax.set(xlabel='Epoch',ylabel=label);ax.grid(alpha=.2)
     axes[0].legend(fontsize=7);axes[2].set_yscale('log')
     fig.savefig(out/'adam_learning_rates.png',dpi=180);plt.close(fig)

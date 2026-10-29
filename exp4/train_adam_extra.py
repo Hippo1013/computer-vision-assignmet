@@ -41,6 +41,10 @@ def main():
     torch.backends.cudnn.deterministic=True
     torch.backends.cuda.matmul.allow_tf32=False
     torch.backends.cudnn.allow_tf32=False
+    assert platform.python_version()==base['environment']['python']
+    assert torch.__version__==base['environment']['torch']
+    assert torchvision.__version__==base['environment']['torchvision']
+    assert t.np.__version__==base['environment']['numpy']
     assert torch.cuda.is_available()
     device=torch.device('cuda:0')
     data=BASE/'cv_homework2/data'
