@@ -132,6 +132,6 @@ Windows运行器为`run_adam_extra.py`，任务名`MachineVision-Exp4-AdamExtra-
 
 旧`outputs/stage45_20261029/`已在检查点处暂停并保留，不将它的部分曲线混入新方案。新入口`train_stage4_batch.py`、配置`stage4_batch.json`、输出`outputs/stage4_batch_20261029/`，从相同随机初始权重重新运行四组。复用冻结的模型工厂与容量记录，不修改旧训练实现和数据。新入口的batch_update不拆分输入、不累积梯度，每次函数调用即一次参数更新。
 
-Windows后台运行器`run_stage4_batch.py`，任务名`MachineVision-Exp4-Stage4Batch-20261029`。预检命令：`python exp4/train_stage4_batch.py --preflight-only`；正式训练：`python exp4/train_stage4_batch.py`。本地结果：`python exp4/fetch_stage1.py --run stage4_batch_20261029`，可加`--weights`。汇总：`python exp4/summarize_stage45.py --normal-batch`；核验：`python exp4/verify_stage45.py --normal-batch`，Windows同环境可加`--replay`。
+Windows后台运行器`run_stage4_batch.py`，任务名`MachineVision-Exp4-Stage4Batch-20261029`。直接正式训练：`python exp4/train_stage4_batch.py`。本地结果：`python exp4/fetch_stage1.py --run stage4_batch_20261029`，可加`--weights`。汇总：`python exp4/summarize_stage45.py --normal-batch`；核验：`python exp4/verify_stage45.py --normal-batch`，Windows同环境可加`--replay`。
 
-第四步完成后仍必须停止并先汇报，第五步保持禁用，不因老师更好而自动继续。当前正在迁移方案并进行新更新规则的预检。
+第四步完成后仍必须停止并先汇报，第五步保持禁用，不因老师更好而自动继续。按用户要求跳过额外更新规则预检，直接正式训练；复用已通过的实际批大小容量记录，运行中逐轮记录并核对79/313次更新。

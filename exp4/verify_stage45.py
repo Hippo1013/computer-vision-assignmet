@@ -24,7 +24,7 @@ def main():
     assert common['epochs']==50 and common['seed']==20261029
     if args.normal_batch:
         assert common['update_rule']=='one_optimizer_step_per_batch' and common['batch_sizes']=={'resnet18':640,'resnet50':160}
-        assert all(protocol['preflight_checks'].values())
+        assert protocol['validation_mode']=='runtime_only_user_requested'
         assert text_digest_matches(BASE/'train_stage45.py',protocol['model_factory_source_sha256'])
     else:assert common['effective_batch_size']==1280
     assert text_digest_matches(BASE/('train_stage4_batch.py' if args.normal_batch else 'train_stage45.py'),protocol['source_sha256'])

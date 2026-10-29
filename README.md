@@ -8,7 +8,7 @@
 - `exp2/`：MVSNet 多视图深度、点云融合、参数对比脚本与青蓝报告源码；入口见 `exp2/实验指令汇总.md`。
 - `exp3/`：HOG 特征与 SVM 图像分类、CIFAR-10 HOG 参数搜索和固定 HOG 的 SVM 参数调优；入口见 `exp3/实验指令汇总.md`，代码与环境说明见 `exp3/cv_homework1/README.md`。
 
-- `exp4/`：ResNet10 的 CIFAR-100 优化器与学习率对照，训练在 Windows GPU 上执行；入口见 `exp4/README.md`。
+- `exp4/`：CIFAR-100 的优化器、学习率与 ResNet10/18/50 网络比较，训练在 Windows GPU 上执行；入口见 `exp4/README.md`。
 
 ## 小组协作
 

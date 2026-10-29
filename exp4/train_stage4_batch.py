@@ -6,7 +6,6 @@ import math
 import platform
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 import numpy as np
@@ -30,59 +29,6 @@ def batch_update(model,optimizer,x,y):
     optimizer.step()
     return {'loss_sum':loss.item()*len(y),'ce_sum':loss.item()*len(y),'distill_sum':0.,
             'correct':(logits.argmax(1)==y).sum().item(),'count':len(y)}
-
-
-def update_checks(train,device,common):
-    checks={}
-    for batch in [640,160]:
-        t.seed_all(common['seed'])
-        toy=nn.Linear(3,5).to(device);optimizer=torch.optim.SGD(toy.parameters(),lr=.001)
-        calls=[];handle=optimizer.register_step_post_hook(lambda *args:calls.append(1))
-        total=0;last_count=0
-        for start in range(0,50000,batch):
-            count=min(batch,50000-start)
-            x=torch.randn(count,3,device=device);y=torch.arange(count,device=device)%5
-            row=batch_update(toy,optimizer,x,y);total+=row['count'];last_count=count
-        handle.remove()
-        assert total==50000 and last_count==80 and len(calls)==math.ceil(50000/batch)
-    checks['one_step_per_batch_79_or_313_updates_and_80_tail']=True
-    del toy,optimizer,x,y
-    t.seed_all(common['seed'])
-    model=model_new('resnet18',device);reference=model_new('resnet18',device)
-    reference.load_state_dict(model.state_dict())
-    a=t.optimizer_new(model,{'optimizer':'adam','lr':.001})
-    b=t.optimizer_new(reference,{'optimizer':'adam','lr':.001})
-    x,y=next(train.batches(4,common['seed']+2,True))
-    model.train();batch_update(model,a,x,y)
-    reference.train();b.zero_grad(set_to_none=True)
-    nn.functional.cross_entropy(reference(x),y).backward();b.step()
-    assert all(torch.equal(v,reference.state_dict()[k]) for k,v in model.state_dict().items())
-    checks['matches_direct_pytorch_step_exactly']=True
-    with tempfile.TemporaryDirectory(prefix='exp4-normal-batch-check-') as temp:
-        path=Path(temp)/'resume.pt'
-        t.save_checkpoint(path,model,a,1,[],-1.)
-        batch_update(model,a,x,y)
-        expected={k:v.detach().clone() for k,v in model.state_dict().items()}
-        t.load_checkpoint(path,model,a);model.train();batch_update(model,a,x,y)
-        assert all(torch.equal(v,expected[k]) for k,v in model.state_dict().items())
-    checks['model_optimizer_resume_exact']=True
-    del model,reference,a,b,x,y,expected
-    gc.collect();torch.cuda.empty_cache()
-    for architecture in ['resnet18','resnet50']:
-        t.seed_all(common['seed']);model=model_new(architecture,device)
-        optimizer=t.optimizer_new(model,{'optimizer':'adam','lr':.001})
-        x,y=next(train.batches(common['batch_sizes'][architecture],common['seed']+3,True))
-        model.train();batch_update(model,optimizer,x,y)
-        assert state_digest(model)
-        del model,optimizer,x,y
-        gc.collect();torch.cuda.empty_cache()
-    checks['both_selected_batches_fit_with_adam']=True
-    for lr in [.1,.001]:
-        expected=[lr,lr,lr*.1,lr*.1,lr*.01,lr*.01]
-        actual=[t.lr_at({'lr':lr,'milestones':[30,40]},epoch) for epoch in [1,30,31,40,41,50]]
-        assert all(math.isclose(x,y,rel_tol=1e-12) for x,y in zip(expected,actual))
-    checks['learning_rate_boundaries']=True
-    return checks
 
 
 def run_one(config, common, capacity, train, test, out, device):
@@ -156,7 +102,6 @@ def run_one(config, common, capacity, train, test, out, device):
 def main():
     p=argparse.ArgumentParser(__doc__)
     p.add_argument('--output',type=Path,default=OUT)
-    p.add_argument('--preflight-only',action='store_true')
     args=p.parse_args();out=args.output;out.mkdir(parents=True,exist_ok=True)
     lock=open(out/'run.lock','a+b')
     if platform.system()=='Windows':
@@ -191,20 +136,16 @@ def main():
     torch.cuda.set_per_process_memory_fraction(budget/total,device)
     pp=out/'protocol.json'
     if not pp.exists():
-        checks=update_checks(train,device,common)
-        protocol={'config':config,'capacity':capacity,'preflight_checks':checks,'memory_budget_bytes':budget,
+        protocol={'config':config,'capacity':capacity,'validation_mode':'runtime_only_user_requested','memory_budget_bytes':budget,
                   'capacity_source_protocol_sha256':t.sha(capacity_file),'environment':source['environment'],
                   'data_protocol':source['data_protocol'],'data_sha256':source['data_sha256'],
                   'source_sha256':t.sha(__file__),'model_factory_source_sha256':t.sha(BASE/'train_stage45.py'),
                   'shared_source_sha256':t.sha(BASE/'train_stage1.py'),'model_source_sha256':t.sha(COURSE),
                   'git_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=BASE,text=True).strip()}
-        t.write_json(pp,protocol);t.write_json(out/'preflight.json',checks)
+        t.write_json(pp,protocol)
     else:
         protocol=json.loads(pp.read_text(encoding='utf-8'))
         assert protocol['source_sha256']==t.sha(__file__) and protocol['config']==config,'Source/config changed'
-    if args.preflight_only:
-        print(json.dumps({'preflight':'passed','batch_sizes':common['batch_sizes']}),flush=True)
-        return 0
     histories,failed={},[]
     for run in config['stage4']:
         try:histories[run['id']]=run_one(run,common,capacity,train,test,out,device)
