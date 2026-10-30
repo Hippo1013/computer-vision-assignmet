@@ -1,5 +1,6 @@
 """Summarize the four distillation runs beside the unchanged ResNet18 baseline."""
 import json
+import sys
 from pathlib import Path
 import matplotlib
 matplotlib.use('Agg')
@@ -14,6 +15,8 @@ def read(path):
 
 
 def main():
+    # Redirected Windows stdout can default to GBK, which cannot print T².
+    sys.stdout.reconfigure(encoding='utf-8', errors='backslashreplace')
     OUT.mkdir(parents=True, exist_ok=True)
     config = read(BASE / 'stage5.json')
     baseline = BASE / 'outputs/stage4_batch_20261029/resnet18_adam'
